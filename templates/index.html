@@ -91,17 +91,18 @@
         transition: background-color 0.4s ease, color 0.4s ease; position: relative; z-index: 1;
     }
 
+    /* Ambient Background Glow */
     body::before {
         content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
-        background: radial-gradient(circle at center, rgba(16, 185, 129, 0.03) 0%, transparent 40%);
+        background: radial-gradient(circle at center, rgba(16, 185, 129, 0.04) 0%, transparent 50%);
         z-index: -1; pointer-events: none; transition: background 0.4s ease;
     }
     [data-theme="light"] body::before {
-        background: radial-gradient(circle at center, rgba(5, 150, 105, 0.05) 0%, transparent 40%);
+        background: radial-gradient(circle at center, rgba(5, 150, 105, 0.06) 0%, transparent 50%);
     }
 
     #header { 
-        background: var(--bg-panel); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+        background: var(--bg-panel); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
         padding: 12px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; 
         align-items: center; z-index: 50; box-shadow: 0 4px 30px rgba(0,0,0,0.05); flex-wrap: wrap; gap: 10px;
     }
@@ -114,18 +115,18 @@
     .icon-btn {
         background: transparent; color: var(--text-sec); border: 1px solid var(--border);
         width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-        cursor: pointer; transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); font-size: 14px;
+        cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); font-size: 14px;
     }
-    .icon-btn:hover { background: rgba(128,128,128,0.1); color: var(--text-pri); transform: scale(1.08); }
-    .icon-btn:active { transform: scale(0.92); }
+    .icon-btn:hover { background: rgba(128,128,128,0.1); color: var(--text-pri); transform: scale(1.05); }
+    .icon-btn:active { transform: scale(0.95); }
 
     .header-btn {
         background: transparent; color: var(--text-sec); border: 1px solid var(--border);
         padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer;
-        display: flex; align-items: center; gap: 6px; transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+        display: flex; align-items: center; gap: 6px; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    .header-btn:hover:not(:disabled) { background: rgba(128,128,128,0.1); color: var(--text-pri); transform: scale(1.03); }
-    .header-btn:active:not(:disabled) { transform: scale(0.95); }
+    .header-btn:hover:not(:disabled) { background: rgba(128,128,128,0.1); color: var(--text-pri); transform: scale(1.02); }
+    .header-btn:active:not(:disabled) { transform: scale(0.96); }
     .header-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .header-btn.danger:hover { background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.3); }
     .header-btn.active { background: rgba(16, 185, 129, 0.1); color: var(--accent); border-color: rgba(16, 185, 129, 0.3); }
@@ -158,10 +159,8 @@
     .welcome-container h2 { font-size: 24px; font-weight: 800; margin-bottom: 12px; min-height: 36px; color: var(--text-pri); }
     .welcome-container p { font-size: 15px; color: var(--text-sec); max-width: 500px; line-height: 1.6; opacity: 0; transform: translateY(10px); transition: opacity 0.8s ease, transform 0.8s ease; }
     .welcome-container p.show { opacity: 1; transform: translateY(0); }
-    
     .typewriter-text { border-right: 2px solid var(--accent); padding-right: 4px; animation: blinkCursor 0.8s steps(40) infinite normal; }
     html[dir="ltr"] .typewriter-text { border-right: none; border-left: 2px solid var(--accent); padding-right: 0; padding-left: 4px; }
-    
     @keyframes blinkCursor { from, to { border-color: transparent } 50% { border-color: var(--accent); } }
     @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -213,25 +212,25 @@
 
     #input-container { 
         padding: 16px 15px calc(16px + env(safe-area-inset-bottom)); 
-        background: var(--bg-panel); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); 
+        background: var(--bg-panel); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); 
         border-top: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; z-index: 50; 
     }
     #image-preview-container { display: none; width: 100%; max-width: 850px; margin-bottom: 12px; position: relative; }
     #image-preview-container img { height: 64px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-    .remove-image-btn { position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
+    .remove-image-btn { position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
     html[dir="ltr"] .remove-image-btn { right: auto; left: -6px; }
     .remove-image-btn:hover { transform: scale(1.15); }
     
     .input-wrapper { width: 100%; max-width: 850px; display: flex; align-items: flex-end; gap: 8px; background: var(--bg-main); border: 1px solid var(--border); border-radius: 24px; padding: 6px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); transition: border-color 0.3s, box-shadow 0.3s; }
     .input-wrapper:focus-within { border-color: var(--accent); box-shadow: 0 8px 30px rgba(16, 185, 129, 0.1); }
     
-    .attach-btn { background: transparent; color: var(--text-sec); border: none; padding: 10px; cursor: pointer; border-radius: 18px; transition: 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); display: flex; align-items: center; justify-content: center; margin-bottom: 2px; }
+    .attach-btn { background: transparent; color: var(--text-sec); border: none; padding: 10px; cursor: pointer; border-radius: 18px; transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: center; margin-bottom: 2px; }
     .attach-btn:hover { background: rgba(128,128,128,0.1); color: var(--text-pri); }
     
     #msgInput { flex: 1; padding: 10px 8px; background: transparent; border: none; color: var(--text-pri); outline: none; font-size: 15px; font-family: inherit; resize: none; min-height: 44px; max-height: 150px; overflow-y: auto; line-height: 1.6; }
     #msgInput::placeholder { color: var(--text-muted); }
     
-    #sendBtn { background: var(--accent); color: white; border: none; border-radius: 18px; min-width: 44px; height: 44px; margin-bottom: 0px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); flex-shrink: 0; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35); }
+    #sendBtn { background: var(--accent); color: white; border: none; border-radius: 18px; min-width: 44px; height: 44px; margin-bottom: 0px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); flex-shrink: 0; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35); }
     #sendBtn:hover:not(:disabled) { background: #059669; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(5, 150, 105, 0.4); }
     #sendBtn:active:not(:disabled) { transform: scale(0.92); }
     #sendBtn:disabled { background: var(--bg-user); color: var(--text-muted); cursor: not-allowed; box-shadow: none; border: 1px solid var(--border); }
@@ -243,7 +242,7 @@
     #aboutModal.visible .modal-content { transform: translateY(0) scale(1); }
     .modal-content h2 { margin-bottom: 12px; color: var(--text-pri); font-weight: 800; font-size: 20px;}
     .modal-content p { color: var(--text-sec); font-size: 14px; margin-bottom: 24px; line-height: 1.7; }
-    .close-modal { background: var(--bg-user); color: var(--text-pri); border: 1px solid var(--border); padding: 10px 28px; border-radius: 14px; cursor: pointer; font-weight: 600; transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
+    .close-modal { background: var(--bg-user); color: var(--text-pri); border: 1px solid var(--border); padding: 10px 28px; border-radius: 14px; cursor: pointer; font-weight: 600; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
     .close-modal:hover { background: var(--border); transform: scale(1.05); }
 
     /* Sidebar History Styles */
@@ -266,7 +265,7 @@
     .new-chat-btn {
         margin: 20px 15px 10px 15px; padding: 14px; background: rgba(16, 185, 129, 0.1); color: var(--accent);
         border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 14px; font-weight: 700; font-size: 14px;
-        cursor: pointer; transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+        cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .new-chat-btn:hover { background: var(--accent); color: white; transform: translateY(-2px); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2); }
     .new-chat-btn:active { transform: scale(0.96); }
@@ -369,7 +368,7 @@
         <div class="modal-content">
             <div class="title-icon" style="font-size: 42px; margin-bottom: 15px;">✦</div>
             <h2 id="modal-title">AI Workspace Enterprise</h2>
-            <p id="modal-desc">نسخه 17.7 Final<br>طراحی مهندسی‌شده برای پایداری مطلق، همگام‌سازی محتوا و امنیت یکپارچه.</p>
+            <p id="modal-desc">نسخه 18.0.1 Final<br>طراحی مهندسی‌شده برای پایداری مطلق، همگام‌سازی محتوا و امنیت یکپارچه.</p>
             <button class="close-modal" onclick="closeAbout()" id="modal-close">بستن</button>
         </div>
     </div>
@@ -385,7 +384,7 @@
             unload_req: "در حال ارسال دستور تخلیه RAM/VRAM...", def_model: "مدل پیش‌فرض", srv_off: "سرور خاموش",
             timeout: "❌ تایم‌اوت در پردازش.", err_enc: "خطا در رمزنگاری.", history: "تاریخچه گفتگوها", new_chat: "گفتگوی جدید",
             quota_err: "⚠️ فضای مرورگر پر شده است. لطفاً از تاریخچه، گفتگوهای قدیمی را پاک کنید.",
-            about_desc: "نسخه 17.7 Final<br>مهندسی‌شده برای پایداری مطلق، همگام‌سازی محتوا و زیبایی بصری.", close: "بستن", langToggle: "EN",
+            about_desc: "نسخه 18.0.1 Final<br>مهندسی‌شده برای پایداری مطلق، همگام‌سازی محتوا و زیبایی بصری.", close: "بستن", langToggle: "EN",
             welcome_title: "به فضای کاری هوشمند خوش آمدید",
             welcome_subtitle: "برای شروع، پیام خود را بنویسید یا یک تصویر بارگذاری کنید. من آماده‌ی کمک هستم."
         },
@@ -397,15 +396,45 @@
             unload_req: "Sending RAM/VRAM unload request...", def_model: "Default Model", srv_off: "Server Offline",
             timeout: "❌ Processing timeout.", err_enc: "Encryption error.", history: "Chat History", new_chat: "New Chat",
             quota_err: "⚠️ Browser storage full. Please delete old chats from history.",
-            about_desc: "Version 17.7 Final<br>Engineered for absolute stability, context sync, and visual aesthetics.", close: "Close", langToggle: "FA",
+            about_desc: "Version 18.0.1 Final<br>Engineered for absolute stability, context sync, and visual aesthetics.", close: "Close", langToggle: "FA",
             welcome_title: "Welcome to AI Workspace",
             welcome_subtitle: "To get started, type a message or upload an image. I'm ready to assist you."
         }
     };
 
+    // --- Global State Declarations (Fixing Temporal Dead Zone / Reference Errors) ---
     let currentLang = localStorage.getItem("lang") || "fa";
     let currentTheme = localStorage.getItem("theme") || "dark";
     let typewriterTimeout = null;
+    let saveTimeout = null;
+    let renderTimeout = null;
+
+    let sessions = JSON.parse(localStorage.getItem('ai_sessions')) || {};
+    let activeSessionId = localStorage.getItem('ai_active_session');
+    let clientId = localStorage.getItem('ai_client_id');
+    
+    let useTools = false;
+    let currentImageB64 = null;
+    let currentAiBubble = null; 
+    let currentAiContent = "";
+    
+    let ws = null, isS = false, reconnects = 0, watchdog = null;
+    let cryptoKey = null;
+    const rawKey = "{{ env_key }}";
+
+    if (!clientId) {
+        clientId = "web_" + Math.random().toString(36).slice(2, 10);
+        localStorage.setItem('ai_client_id', clientId);
+    }
+
+    // --- DOM Elements ---
+    const textarea = document.getElementById('msgInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const chatWindow = document.getElementById('chat-window');
+    const modelSelector = document.getElementById('modelSelector');
+
+
+    // --- Functions Definitions ---
 
     function applyTheme(theme) {
         currentTheme = theme;
@@ -452,9 +481,6 @@
     }
 
     function toggleLanguage() { applyLanguage(currentLang === 'fa' ? 'en' : 'fa'); }
-
-    applyTheme(currentTheme);
-    applyLanguage(currentLang);
 
     function openAbout() { const m = document.getElementById("aboutModal"); m.classList.add("visible"); }
     function closeAbout() { const m = document.getElementById("aboutModal"); m.classList.remove("visible"); }
@@ -505,20 +531,6 @@
             if (typewriterTimeout) clearTimeout(typewriterTimeout);
             welcome.remove();
         }
-    }
-
-    // --- Session & History Management ---
-    let sessions = JSON.parse(localStorage.getItem('ai_sessions')) || {};
-    let activeSessionId = localStorage.getItem('ai_active_session');
-    let clientId = localStorage.getItem('ai_client_id');
-
-    if (!clientId) {
-        clientId = "web_" + Math.random().toString(36).slice(2, 10);
-        localStorage.setItem('ai_client_id', clientId);
-    }
-
-    if (!activeSessionId || !sessions[activeSessionId]) {
-        initNewChatLocal(false);
     }
 
     function saveSessionsSync() {
@@ -606,7 +618,6 @@
         });
     }
 
-    let saveTimeout = null;
     function saveSessionsThrottled() {
         if(saveTimeout) return;
         saveTimeout = setTimeout(() => {
@@ -636,17 +647,6 @@
         if (isDone) saveSessionsSync();
         else saveSessionsThrottled();
     }
-
-    // --- App Core Logic ---
-    let useTools = false;
-    let currentImageB64 = null;
-    let currentAiBubble = null; 
-    let currentAiContent = "";
-
-    const textarea = document.getElementById('msgInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const chatWindow = document.getElementById('chat-window');
-    const modelSelector = document.getElementById('modelSelector');
 
     function toggleSidebar(forceState = null) {
         const sidebar = document.getElementById('sidebar');
@@ -730,9 +730,6 @@
             document.body.removeChild(t);
         }
     };
-    
-    const rawKey = "{{ env_key }}";
-    let cryptoKey = null;
     
     async function initCrypto() {
         try {
@@ -820,8 +817,6 @@
         currentAiBubble = div.querySelector('#latest-ai-bubble'); currentAiContent = ""; scrollToBottom(true);
     }
 
-    let renderTimeout = null; // Throttling state for DOM updates
-    
     function updateAiMessage(text, isStreaming, isThinking, skipSave = false) {
         if (!currentAiBubble) createAiMessageContainer();
         currentAiContent = text;
@@ -877,15 +872,13 @@
         scrollToBottom(true);
     }
 
-    const wsUrl = `${location.protocol==="https:"?"wss:":"ws:"}//${location.host}/ws/client/${clientId}`;
-    let ws = null, isS = false, reconnects = 0, watchdog = null;
-
     function resetWatchdog() {
         if(watchdog) clearTimeout(watchdog);
         if(isS) watchdog = setTimeout(() => { appendSystemMessage(dict[currentLang].timeout); if(ws) ws.close(); }, 60000);
     }
 
     function connect() {
+        const wsUrl = `${location.protocol==="https:"?"wss:":"ws:"}//${location.host}/ws/client/${clientId}`;
         if(ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
         ws = new WebSocket(wsUrl);
         ws.onopen = () => { setWS(true); reconnects = 0; textarea.dispatchEvent(new Event('input')); };
@@ -1003,7 +996,15 @@
     }
     
     setInterval(() => { if(ws?.readyState===1) ws.send(JSON.stringify({type:"ping"})); }, 20000);
+    
+    // --- Initial Execution Sequence ---
     window.onload = async () => { 
+        if (!activeSessionId || !sessions[activeSessionId]) {
+            initNewChatLocal(false);
+        }
+        applyTheme(currentTheme);
+        applyLanguage(currentLang);
+        
         await initCrypto(); 
         renderSession(); 
         connect(); 
