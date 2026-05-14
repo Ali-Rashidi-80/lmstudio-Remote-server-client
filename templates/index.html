@@ -481,8 +481,9 @@
     function updateAiMessage(text, isStreaming, isThinking) {
         if (!currentAiBubble) createAiMessageContainer();
         currentAiContent = text;
-        if (isThinking) currentAiBubble.innerHTML = `<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
-        else { requestAnimationFrame(() => { currentAiBubble.innerHTML = window.marked.parse(currentAiContent, isStreaming); }); }
+        const targetBubble = currentAiBubble;
+        if (isThinking) targetBubble.innerHTML = `<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+        else { requestAnimationFrame(() => { if (targetBubble) targetBubble.innerHTML = window.marked.parse(currentAiContent, isStreaming); }); }
         scrollToBottom(); 
     }
 
