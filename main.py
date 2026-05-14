@@ -1,5 +1,6 @@
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+from fastapi.responses import Response
 from starlette.websockets import WebSocketState
 from fastapi.templating import Jinja2Templates
 import logging
@@ -14,7 +15,7 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - BRIDGE - %(message)s")
 logger = logging.getLogger("Bridge")
 
-app = FastAPI(title="AI Bridge (God Tier V15)")
+app = FastAPI(title="AI Bridge (Enterprise V17)")
 os.makedirs("templates", exist_ok=True)
 templates = Jinja2Templates(directory="templates")
 
@@ -26,7 +27,7 @@ class ConnectionManager:
         self.user_clients: Dict[str, WebSocket] = {}
         self.user_locks: Dict[str, asyncio.Lock] = {}
         self.background_tasks: Set[asyncio.Task] = set()
-        self.dict_lock = asyncio.Lock() # قفل جدید برای جلوگیری از تداخل تغییرات دیکشنری
+        self.dict_lock = asyncio.Lock()
 
     def create_safe_task(self, coro):
         task = asyncio.create_task(coro)
@@ -54,7 +55,7 @@ class ConnectionManager:
         logger.info(f"👤 User {client_id} Connected.")
 
     async def disconnect_pc(self):
-        if self.pc_client is None: return # جلوگیری از پردازش تکراری
+        if self.pc_client is None: return 
         self.pc_client = None
         self.pc_hw_mode = "CPU"
         logger.warning("🔴 PC Node Offline.")
@@ -67,7 +68,6 @@ class ConnectionManager:
             self.user_locks.pop(client_id, None)
             
         logger.info(f"👤 User {client_id} Disconnected.")
-        # جلوگیری از Cascading Crash: فقط اگر PC واقعاً متصل است پیام لغو بفرست
         if ws and self.pc_client and self.pc_client.client_state == WebSocketState.CONNECTED:
             cancel_msg = json.dumps({"type": "sys_cancel", "content": "user_left"})
             self.create_safe_task(self.send_to_pc_raw(client_id, encrypt_message(cancel_msg)))
@@ -75,7 +75,6 @@ class ConnectionManager:
     async def broadcast_sys_status(self, is_online: bool, hw_mode: str):
         packet = json.dumps({"type": "sys_status", "content": "online" if is_online else "offline", "hw": hw_mode})
         enc = encrypt_message(packet)
-        # کپی از کلیدها برای جلوگیری از خطای RuntimeError هنگام حلقه زدن
         async with self.dict_lock:
             active_users = list(self.user_clients.keys())
             
@@ -119,44 +118,56 @@ async def index(request: Request):
 
 @app.get("/favicon.ico")
 async def favicon():
-    return {"detail": "Favicon not found"}, 404
+    # رفع باگ اتمیک: بازگرداندن شیء Response معتبر برای FastAPI
+    return Response(status_code=404)
 
 @app.websocket("/ws/pc")
 async def pc_ws(websocket: WebSocket):
     await manager.connect_pc(websocket)
-    last_ping = asyncio.get_event_loop().time()
-    ping_interval = 30.0  # افزایش به 30 ثانیه
-    pong_timeout = 10.0   # تایم‌اوت برای پونگ
+    loop = asyncio.get_running_loop()
+    last_ping = loop.time()
+    ping_interval = 30.0  
+    pong_timeout = 10.0   
     try:
         while True:
             try:
                 raw = await asyncio.wait_for(websocket.receive_text(), timeout=ping_interval)
                 data = json.loads(raw)
-                if data.get("type") == "pong":
-                    last_ping = asyncio.get_event_loop().time()
+                
+                if data.get("type") == "ping":
+                    async with manager.pc_lock:
+                        await websocket.send_json({"type": "pong"})
                     continue
+                    
+                if data.get("type") == "pong":
+                    last_ping = loop.time()
+                    continue
+                    
                 elif "client_id" in data and "payload" in data:
                     manager.create_safe_task(manager.send_to_user_safe(data["client_id"], data["payload"]))
+                    
                 elif data.get("type") == "hw_info":
                     manager.pc_hw_mode = data.get("content", "CPU")
                     manager.create_safe_task(manager.broadcast_sys_status(True, manager.pc_hw_mode))
+                    
             except asyncio.TimeoutError:
-                # ارسال پینگ اگر تایم‌اوت رخ داد
                 if websocket.client_state == WebSocketState.CONNECTED:
                     async with manager.pc_lock:
                         await websocket.send_json({"type": "ping"})
-                    # انتظار برای پونگ
                     try:
                         pong_data = await asyncio.wait_for(websocket.receive_text(), timeout=pong_timeout)
                         pong_json = json.loads(pong_data)
                         if pong_json.get("type") == "pong":
-                            last_ping = asyncio.get_event_loop().time()
+                            last_ping = loop.time()
                         else:
                             raise ValueError("Unexpected response")
                     except (asyncio.TimeoutError, ValueError):
                         logger.warning("Pong not received, closing connection")
                         await websocket.close(code=1000)
                         break
+    except WebSocketDisconnect:
+        logger.warning("PC Node disconnected normally.")
+        await manager.disconnect_pc()
     except Exception as e:
         logger.error(f"PC Connection Dropped: {e}")
         await manager.disconnect_pc()
@@ -176,8 +187,11 @@ async def user_ws(websocket: WebSocket, client_id: str):
                 if lock and websocket.client_state == WebSocketState.CONNECTED:
                     async with lock: 
                         await websocket.send_json({"type": "pong"})
+    except WebSocketDisconnect:
+        logger.info(f"User {client_id} disconnected normally.")
+        await manager.disconnect_user(client_id)
     except Exception as e:
-        logger.warning(f"User {client_id} disconnected: {e}")
+        logger.warning(f"User {client_id} disconnected with error: {e}")
         await manager.disconnect_user(client_id)
 
 if __name__ == "__main__":

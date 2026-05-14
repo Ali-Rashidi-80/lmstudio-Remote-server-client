@@ -3,122 +3,320 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>AI Workspace</title>
+    <meta name="theme-color" content="#09090b">
+    <title>AI Workspace | فضای کاری هوش مصنوعی</title>
     
-     <!-- اسکریپت‌های جایگزین برای کار بدون تحریم و بدون نیاز به اینترنت -->
-     <script>
-        // موتور رندر Markdown فوق‌سبک و محلی (جایگزین Marked.js در زمان قطعی نت)
+    <script>
         window.marked = {
-            parse: function(t) {
-                if (!t) return "";
-                let html = t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            parse: function(text, isStreaming = false) {
+                if (!text) return "";
+                let safeText = text;
                 
-                // پردازش بلاک‌های کد
-                html = html.replace(/```([a-zA-Z0-9]*)\n([\s\S]*?)```/g, function(match, lang, code) {
-                    let header = lang ? `<div class="code-header">${lang}</div>` : '<div class="code-header">Code</div>';
-                    return `<div class="code-block-wrapper">${header}<pre><code>${code}</code></pre></div>`;
+                if (isStreaming) {
+                    let codeBlocksCount = (safeText.match(/```/g) || []).length;
+                    if (codeBlocksCount % 2 !== 0) safeText += '\n```';
+                }
+
+                let html = safeText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                
+                let codeBlockRegex = /```([a-zA-Z0-9\+\-\#]*)\n([\s\S]*?)```/g;
+                html = html.replace(codeBlockRegex, function(match, lang, code) {
+                    let language = lang ? lang.trim() : 'کد';
+                    let blockId = 'code-' + Math.random().toString(36).substr(2, 9);
+                    return `
+                    <div class="code-block-wrapper" dir="ltr">
+                        <div class="code-header">
+                            <span class="code-lang">${language}</span>
+                            <button class="copy-btn" onclick="copyCode('${blockId}', this)">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                <span>کپی</span>
+                            </button>
+                        </div>
+                        <div class="code-content"><pre><code id="${blockId}">${code.trim()}</code></pre></div>
+                    </div>`;
                 });
                 
-                // پردازش کدهای خطی و بولد
-                html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-                html = html.replace(/\*\*([^\*]+)\*\*/g, '<b>$1</b>');
+                html = html.replace(/`([^`\n]+)`/g, '<code class="inline-code">$1</code>');
+                html = html.replace(/\*\*([^\*\n]+)\*\*/g, '<b>$1</b>');
+                html = html.replace(/\*([^\*\n]+)\*/g, '<i>$1</i>');
                 
-                // حفظ فاصله خطوط بدون خراب کردن بلاک‌های کد
-                let segments = html.split('<div class="code-block-wrapper">');
+                let segments = html.split('<div class="code-block-wrapper"');
                 for(let i=0; i<segments.length; i++) {
-                    let inner = segments[i].split('</pre></div>');
-                    if(inner.length === 1) {
-                        segments[i] = segments[i].replace(/\n/g, '<br>');
-                    } else {
+                    let inner = segments[i].split('</div>\n                    </div>');
+                    if(inner.length === 1) segments[i] = segments[i].replace(/\n/g, '<br>');
+                    else {
                         inner[1] = inner[1].replace(/\n/g, '<br>');
-                        segments[i] = inner.join('</pre></div>');
+                        segments[i] = inner.join('</div>\n                    </div>');
                     }
                 }
-                return segments.join('<div class="code-block-wrapper">');
-            },
-            setOptions: function() {}
+                return segments.join('<div class="code-block-wrapper"');
+            }
         };
-        
-        // جایگزین محلی DOMPurify
-        window.DOMPurify = { sanitize: function(h) { return h; }, setConfig: function() {} };
-        // جایگزین محلی Highlight.js
-        window.hljs = { highlightElement: function() {} };
     </script>
 
 <style>
     :root {
-        --bg-main: #0d0d0f; --bg-panel: #1a1b1e; --bg-user: #2d2e33; 
-        --accent: #10a37f; --text-pri: #ececf1; --text-sec: #9ca3af; --border: #2b2c31;
+        --bg-main: #09090b;       
+        --bg-panel: rgba(24, 24, 27, 0.85); 
+        --bg-user: #27272a;       
+        --accent: #10b981;        
+        --text-pri: #f4f4f5;      
+        --text-sec: #a1a1aa;      
+        --text-muted: #52525b;    
+        --border: #27272a;        
+        --radius-lg: 16px;
+        --radius-md: 12px;
+        --font-stack: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg-main); margin: 0; display: flex; flex-direction: column; height: 100vh; height: calc(var(--vh, 1vh) * 100); color: var(--text-pri); overflow: hidden; }
-    #header { background: var(--bg-panel); padding: 15px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .title { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--accent); }
-    .status-badge { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-sec); background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); }
-    .hw-chip { font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 4px; color: #fff; }
-    .hw-gpu { background: #76b900; } .hw-cpu { background: #007acc; } .hw-none { background: #555; }
-    .dot { height: 10px; width: 10px; border-radius: 50%; }
-    .dot.red { background: #ef4444; } .dot.green { background: var(--accent); } .dot.gray { background: #555; }
-    #chat-window { flex: 1; overflow-y: auto; padding: 20px 15px; display: flex; flex-direction: column; gap: 24px; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
-    .msg-row { display: flex; flex-direction: column; width: 100%; animation: slide 0.3s ease; }
-    @keyframes slide { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    .avatar { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: white; }
-    .avatar-user { background: #4b5563; } .avatar-ai { background: var(--accent); }
-    .user-bubble { background: var(--bg-user); border: 1px solid var(--border); max-width: 90%; padding: 14px 20px; border-radius: 18px; border-top-right-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
-    .ai-bubble { width: 100%; direction: rtl; padding: 0 5px; }
-    .code-block-wrapper { background: #0d1117; border-radius: 12px; border: 1px solid var(--border); margin: 16px 0; overflow: hidden; direction: ltr; text-align: left; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .code-header { display: flex; justify-content: space-between; align-items: center; background: #161b22; padding: 10px 16px; font-size: 12px; color: #8b949e; border-bottom: 1px solid #30363d; font-family: monospace; }
-    .ai-bubble pre { margin: 0; padding: 16px; overflow-x: auto; font-family: 'Consolas', monospace; font-size: 14px; white-space: pre; }
-    code { background: #2b2b2b; color: #ff7b72; padding: 3px 6px; border-radius: 4px; font-family: 'Consolas', monospace; }
-    .typing-indicator { display: inline-flex; gap: 4px; padding: 10px 0; }
-    .typing-dot { width: 6px; height: 6px; background: var(--text-sec); border-radius: 50%; animation: blink 1.4s infinite; }
-    @keyframes blink { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
-    #input-area { padding: 18px 20px; background: var(--bg-main); display: flex; gap: 12px; border-top: 1px solid var(--border); }
-    .input-wrapper { flex: 1; display: flex; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 24px; padding: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
-    #msgInput { flex: 1; padding: 12px 16px; background: transparent; border: none; color: #fff; outline: none; font-size: 16px; width: 100%; }
-    #sendBtn { background: var(--accent); color: white; border: none; border-radius: 18px; width: 48px; height: 48px; cursor: pointer; transition: 0.2s; }
-    #sendBtn:hover { background: #0d8a6b; }
-    #sendBtn:disabled { background: #374151; color: #6b7280; }
-</style></head>
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+    body { font-family: var(--font-stack); background: var(--bg-main); display: flex; flex-direction: column; height: 100vh; height: 100dvh; color: var(--text-pri); overflow: hidden; line-height: 1.6; }
+
+    #header { 
+        background: var(--bg-panel); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        padding: 12px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; 
+        align-items: center; z-index: 50; box-shadow: 0 4px 20px rgba(0,0,0,0.3); flex-wrap: wrap; gap: 10px;
+    }
+    
+    .title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--text-pri); white-space: nowrap; }
+    .title-icon { background: linear-gradient(135deg, var(--accent), #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 20px; }
+
+    .status-area { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; flex: 1; }
+
+    .header-btn {
+        background: transparent; color: var(--text-sec); border: 1px solid var(--border);
+        padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; cursor: pointer;
+        display: flex; align-items: center; gap: 4px; transition: all 0.2s;
+    }
+    .header-btn:hover:not(:disabled) { background: rgba(255,255,255,0.05); color: var(--text-pri); }
+    .header-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .header-btn.danger:hover { background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.3); }
+    .header-btn.active { background: rgba(16, 185, 129, 0.1); color: var(--accent); border-color: rgba(16, 185, 129, 0.3); }
+
+    .status-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--text-sec); background: var(--bg-main); padding: 4px 10px; border-radius: 24px; border: 1px solid var(--border); }
+    .hw-chip { font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px; color: #fff; }
+    .hw-gpu { background: #16a34a; box-shadow: 0 0 8px rgba(22, 163, 74, 0.4); } 
+    .hw-cpu { background: #2563eb; box-shadow: 0 0 8px rgba(37, 99, 235, 0.4); } 
+    .hw-none { background: var(--text-muted); display: none;}
+    
+    .dot { height: 6px; width: 6px; border-radius: 50%; }
+    .dot.red { background: #ef4444; box-shadow: 0 0 6px #ef4444; } 
+    .dot.green { background: var(--accent); box-shadow: 0 0 6px var(--accent); } 
+    .dot.gray { background: var(--text-muted); }
+
+    .model-selector-wrapper { position: relative; display: flex; align-items: center; }
+    #modelSelector { appearance: none; background: var(--bg-main); color: var(--accent); border: 1px solid var(--border); padding: 4px 28px 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; cursor: pointer; outline: none; max-width: 130px; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
+    .model-selector-wrapper::after { content: '▼'; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 8px; color: var(--accent); pointer-events: none; }
+
+    #chat-window { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px 15px; display: flex; flex-direction: column; gap: 24px; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
+    .msg-row { display: flex; flex-direction: column; width: 100%; max-width: 850px; margin: 0 auto; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+    .msg-header { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; color: var(--text-pri); margin-bottom: 8px; }
+    .avatar { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+    .avatar-user { background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-sec); } 
+    .avatar-ai { background: linear-gradient(135deg, var(--accent), #047857); color: white; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2); }
+
+    .user-bubble { background: var(--bg-user); max-width: 92%; padding: 12px 16px; border-radius: var(--radius-lg); border-top-right-radius: 4px; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); align-self: flex-start; word-break: break-word; }
+    .user-image-preview { max-width: 100%; border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border); }
+    
+    .ai-bubble { width: 100%; direction: rtl; padding: 0; font-size: 15px; }
+    .ai-bubble p { margin-bottom: 12px; word-break: break-word;}
+    .ai-bubble p:last-child { margin-bottom: 0; }
+    
+    .inline-code { background: var(--bg-panel); color: #60a5fa; padding: 2px 6px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 0.85em; border: 1px solid var(--border); direction: ltr; display: inline-block; }
+    .code-block-wrapper { background: #0d1117; border-radius: var(--radius-md); border: 1px solid #30363d; margin: 16px 0; overflow: hidden; }
+    .code-header { display: flex; justify-content: space-between; align-items: center; background: #161b22; padding: 6px 12px; border-bottom: 1px solid #30363d; }
+    .code-lang { font-size: 11px; color: #8b949e; font-family: ui-monospace, monospace; text-transform: lowercase; }
+    .copy-btn { background: transparent; border: none; color: #8b949e; display: flex; align-items: center; gap: 4px; font-size: 11px; cursor: pointer; padding: 4px 6px; border-radius: 4px; transition: all 0.2s; }
+    .copy-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-pri); }
+    .copy-btn.copied { color: var(--accent); }
+    .code-content { padding: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .code-content pre { margin: 0; }
+    .code-content code { color: #e6edf3; font-family: ui-monospace, monospace; font-size: 13px; white-space: pre; }
+
+    .typing-indicator { display: inline-flex; gap: 4px; padding: 10px 0; align-items: center; height: 24px;}
+    .typing-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; }
+    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes bounce { 0%, 80%, 100% { transform: scale(0); opacity: 0.3; } 40% { transform: scale(1); opacity: 1; } }
+
+    .sys-msg { text-align: center; margin: 10px 0; }
+    .sys-msg span { background: var(--bg-panel); padding: 4px 12px; border-radius: 20px; font-size: 11px; color: var(--text-sec); border: 1px solid var(--border); }
+    .tool-msg span { background: rgba(59, 130, 246, 0.1); color: #60a5fa; border-color: rgba(59, 130, 246, 0.3); }
+
+    #input-container { padding: 12px 15px calc(12px + env(safe-area-inset-bottom)); background: var(--bg-panel); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; z-index: 50; }
+    #image-preview-container { display: none; width: 100%; max-width: 850px; margin-bottom: 10px; position: relative; }
+    #image-preview-container img { height: 60px; border-radius: 8px; border: 1px solid var(--border); }
+    .remove-image-btn { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border: none; width: 20px; height: 20px; border-radius: 50%; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+    .input-wrapper { width: 100%; max-width: 850px; display: flex; align-items: flex-end; gap: 6px; background: var(--bg-main); border: 1px solid var(--border); border-radius: 20px; padding: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+    .input-wrapper:focus-within { border-color: var(--text-muted); }
+    .attach-btn { background: transparent; color: var(--text-sec); border: none; padding: 10px; cursor: pointer; border-radius: 12px; transition: 0.2s; display: flex; align-items: center; justify-content: center; margin-bottom: 2px; }
+    .attach-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-pri); }
+    #msgInput { flex: 1; padding: 10px 8px; background: transparent; border: none; color: var(--text-pri); outline: none; font-size: 15px; font-family: inherit; resize: none; min-height: 44px; max-height: 120px; overflow-y: auto; line-height: 1.5; }
+    #msgInput::placeholder { color: var(--text-muted); }
+    #sendBtn { background: var(--accent); color: white; border: none; border-radius: 16px; min-width: 44px; height: 44px; margin-bottom: 0px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; flex-shrink: 0; }
+    #sendBtn:active:not(:disabled) { transform: scale(0.92); }
+    #sendBtn:disabled { background: var(--bg-user); color: var(--text-muted); cursor: not-allowed; }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
+
+    @media (max-width: 500px) {
+        .title { font-size: 14px; }
+        .header-btn span { display: none; }
+        .status-badge { font-size: 10px; padding: 4px 8px;}
+        #modelSelector { max-width: 100px; font-size: 10px; }
+    }
+</style>
+</head>
 
 <body>
     <div id="header">
-        <div class="title">⚡ AI Workspace</div>
-        <div class="status-box">
+        <div class="title"><span class="title-icon">✦</span> AI Workspace</div>
+        <div class="status-area">
+            <button class="header-btn danger" onclick="unloadModels()" title="خالی کردن RAM سرور">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                <span>تخلیه RAM</span>
+            </button>
+            <button id="toolsToggleBtn" class="header-btn" onclick="toggleTools()" title="فعال/غیرفعال‌سازی خودمختاری (Tools)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                <span>ابزارها</span>
+            </button>
+            <div class="model-selector-wrapper">
+                <select id="modelSelector" disabled title="انتخاب مدل هوش مصنوعی"><option value="">در حال بارگذاری...</option></select>
+            </div>
             <div class="status-badge">شما <span id="web-dot" class="dot red"></span></div>
             <div class="status-badge">سرور <span id="pc-dot" class="dot gray"></span> <span id="hw-chip" class="hw-chip hw-none">OFF</span></div>
         </div>
     </div>
-    <div id="chat-window" class="fade-in"></div>
-    <div id="input-area">
+    
+    <div id="chat-window"></div>
+    
+    <div id="input-container">
+        <div id="image-preview-container"><img id="imagePreview" src="" alt="preview"><button class="remove-image-btn" onclick="removeImage()">✖</button></div>
         <div class="input-wrapper">
-            <input type="text" id="msgInput" placeholder="پیام خود را بنویسید..." autocomplete="off" maxlength="6000">
-            <button id="sendBtn" onclick="sendMessage()" title="ارسال پیام">➤</button>
+            <input type="file" id="imageInput" accept="image/png, image/jpeg, image/webp" style="display: none;" onchange="handleImageSelect(event)">
+            <button class="attach-btn" onclick="document.getElementById('imageInput').click()" title="پیوست تصویر"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg></button>
+            <textarea id="msgInput" rows="1" placeholder="پیام خود را بنویسید..." maxlength="6000"></textarea>
+            <button id="sendBtn" onclick="sendMessage()" disabled><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transform: rotate(180deg); margin-right:2px;"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></button>
         </div>
     </div>
+
 <script>
-    function setVH() { document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`); }
-    window.addEventListener('resize', setVH); setVH();
-    
-    // استفاده از Web Crypto API برای رمزنگاری واقعی AES-CBC
-    const rawKey = "{{ env_key }}";
-    if (!rawKey || rawKey.length < 32) {
-        console.error("Encryption key is invalid or missing. Please check server configuration.");
-        alert("خطای امنیتی: کلید رمزنگاری نامعتبر است.");
+    let useTools = false;
+    let currentImageB64 = null;
+    let currentAiBubble = null; 
+    let currentAiContent = "";
+
+    const textarea = document.getElementById('msgInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const chatWindow = document.getElementById('chat-window');
+    const modelSelector = document.getElementById('modelSelector');
+
+    function toggleTools() {
+        useTools = !useTools;
+        const btn = document.getElementById('toolsToggleBtn');
+        if(useTools) { btn.classList.add('active'); appendSystemMessage("🟢 ابزارهای خودمختار (Agents) فعال شد.", false); }
+        else { btn.classList.remove('active'); appendSystemMessage("🔴 ابزارهای خودمختار غیرفعال شد.", false); }
     }
-    let keyStr = rawKey.substring(0, 32);
-    while(keyStr.length < 32) keyStr += '\0';
+
+    textarea.addEventListener('input', function() {
+        this.style.height = '44px'; 
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        sendBtn.disabled = this.value.trim().length === 0 && !currentImageB64;
+    });
+
+    textarea.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if(!sendBtn.disabled) sendMessage(); }
+    });
+
+    function scrollToBottom(force = false) {
+        const isNearBottom = chatWindow.scrollHeight - chatWindow.clientHeight - chatWindow.scrollTop <= 200;
+        if (isNearBottom || force) requestAnimationFrame(() => { chatWindow.scrollTo({ top: chatWindow.scrollHeight, behavior: 'smooth' }); });
+    }
+
+    function handleImageSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            
+            img.onerror = function() {
+                appendSystemMessage("❌ خطا: فایل انتخاب شده تصویر معتبری نیست.");
+                event.target.value = '';
+                return;
+            };
+            
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                const MAX_DIMENSION = 1024; 
+                
+                if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+                    if (width > height) {
+                        height = Math.floor((height / width) * MAX_DIMENSION);
+                        width = MAX_DIMENSION;
+                    } else {
+                        width = Math.floor((width / height) * MAX_DIMENSION);
+                        height = MAX_DIMENSION;
+                    }
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                currentImageB64 = canvas.toDataURL('image/jpeg', 0.8);
+                
+                document.getElementById('imagePreview').src = currentImageB64;
+                document.getElementById('image-preview-container').style.display = 'block';
+                sendBtn.disabled = false;
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+        event.target.value = ''; 
+    }
+
+    function removeImage() {
+        currentImageB64 = null;
+        document.getElementById('imagePreview').src = '';
+        document.getElementById('image-preview-container').style.display = 'none';
+        textarea.dispatchEvent(new Event('input')); 
+    }
+
+    window.copyCode = function(elementId, btnElement) {
+        const textToCopy = document.getElementById(elementId).innerText;
+        if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(textToCopy).then(successCopy).catch(fallbackCopy); } else { fallbackCopy(); }
+        function successCopy() {
+            const originalText = btnElement.innerHTML;
+            btnElement.classList.add('copied');
+            btnElement.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg><span>کپی شد!</span>`;
+            setTimeout(() => { btnElement.classList.remove('copied'); btnElement.innerHTML = originalText; }, 2000);
+        }
+        function fallbackCopy() {
+            let t = document.createElement("textarea"); t.value = textToCopy; t.style.position = "fixed"; t.style.left = "-999999px";
+            document.body.appendChild(t); t.focus(); t.select();
+            try { document.execCommand('copy'); successCopy(); } catch (err) {}
+            document.body.removeChild(t);
+        }
+    };
     
+    const rawKey = "{{ env_key }}";
+    let keyStr = rawKey.length >= 32 ? rawKey.substring(0, 32) : rawKey.padEnd(32, '\0');
     let cryptoKey = null;
     
     async function initCrypto() {
         try {
             const keyData = new TextEncoder().encode(keyStr);
             cryptoKey = await crypto.subtle.importKey('raw', keyData, { name: 'AES-CBC' }, false, ['encrypt', 'decrypt']);
-        } catch (e) {
-            console.error('Failed to initialize crypto:', e);
-            alert('خطا در راه‌اندازی رمزنگاری.');
-        }
+        } catch (e) { appendSystemMessage("خطای بحرانی در سیستم رمزنگاری."); }
     }
     
     async function encrypt(text) {
@@ -127,8 +325,7 @@
         const data = new TextEncoder().encode(text);
         const encrypted = await crypto.subtle.encrypt({ name: 'AES-CBC', iv: iv }, cryptoKey, data);
         const combined = new Uint8Array(iv.length + encrypted.byteLength);
-        combined.set(iv, 0);
-        combined.set(new Uint8Array(encrypted), iv.length);
+        combined.set(iv, 0); combined.set(new Uint8Array(encrypted), iv.length);
         return btoa(String.fromCharCode(...combined));
     }
     
@@ -136,111 +333,157 @@
         if (!cryptoKey) await initCrypto();
         try {
             const combined = new Uint8Array(atob(base64Str).split('').map(c => c.charCodeAt(0)));
-            const iv = combined.slice(0, 16);
-            const ciphertext = combined.slice(16);
+            const iv = combined.slice(0, 16); const ciphertext = combined.slice(16);
             const decrypted = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: iv }, cryptoKey, ciphertext);
             return new TextDecoder().decode(decrypted);
-        } catch (e) {
-            return '{"type":"error","content":"خطای امنیتی: کلید نامعتبر"}';
-        }
+        } catch (e) { return '{"type":"error","content":"خطای کلید رمزنگاری"}'; }
     }
     
+    function appendSystemMessage(text, isTool = false) {
+        const div = document.createElement('div');
+        div.className = `msg-row sys-msg ${isTool ? 'tool-msg' : ''}`;
+        div.innerHTML = `<span>${text}</span>`;
+        chatWindow.appendChild(div);
+        scrollToBottom(true);
+    }
+
+    function appendUserMessage(text, imgB64) {
+        const safeText = text ? text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>') : '';
+        const imgHtml = imgB64 ? `<img src="${imgB64}" class="user-image-preview">` : '';
+        const div = document.createElement('div');
+        div.className = 'msg-row';
+        div.innerHTML = `
+            <div class="msg-header"><div class="avatar avatar-user"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>شما</div>
+            <div class="user-bubble">${imgHtml}${safeText}</div>`;
+        chatWindow.appendChild(div);
+        scrollToBottom(true);
+    }
+
+    function createAiMessageContainer() {
+        const div = document.createElement('div');
+        div.className = 'msg-row';
+        div.innerHTML = `
+            <div class="msg-header"><div class="avatar avatar-ai"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div>هوش مصنوعی</div>
+            <div class="ai-bubble" id="latest-ai-bubble"></div>`;
+        chatWindow.appendChild(div);
+        currentAiBubble = div.querySelector('#latest-ai-bubble');
+        currentAiContent = "";
+        scrollToBottom(true);
+    }
+
+    function updateAiMessage(text, isStreaming, isThinking) {
+        if (!currentAiBubble) createAiMessageContainer();
+        currentAiContent = text;
+        if (isThinking) currentAiBubble.innerHTML = `<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+        else {
+            requestAnimationFrame(() => {
+                currentAiBubble.innerHTML = window.marked.parse(currentAiContent, isStreaming);
+            });
+        }
+        scrollToBottom(); 
+    }
 
     let clientId = "web_" + Math.random().toString(36).slice(2, 10);
-    try {
-        if(sessionStorage.getItem('cid')) clientId = sessionStorage.getItem('cid');
-        else sessionStorage.setItem('cid', clientId);
-    } catch(e) {}
-    
     const wsUrl = `${location.protocol==="https:"?"wss:":"ws:"}//${location.host}/ws/client/${clientId}`;
-    let ws = null, history = [], isS = false, isT = false, reconnects = 0, watchdog = null;
+    let ws = null, isS = false, reconnects = 0, watchdog = null;
 
     function resetWatchdog() {
         if(watchdog) clearTimeout(watchdog);
-        if(isS || isT) watchdog = setTimeout(() => { handleP("error", "تایم‌اوت ارتباط با سرور. لطفا مجدد ارسال کنید."); if(ws) ws.close(); }, 60000);
+        if(isS) watchdog = setTimeout(() => { appendSystemMessage("❌ تایم‌اوت در پردازش."); if(ws) ws.close(); }, 60000);
     }
-    
-    document.addEventListener("visibilitychange", () => { 
-        if(document.visibilityState==="visible" && ws?.readyState===1) ws.send(JSON.stringify({type:"ping"})); 
-    });
 
     function connect() {
         if(ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
-        
         ws = new WebSocket(wsUrl);
-        ws.onopen = () => { setWS(true); reconnects = 0; if(!history.length) { history.push({role:'sys', content:"ارتباط امن برقرار شد."}); render(); } };
-        ws.onclose = () => { setWS(false); ws = null; setTimeout(connect, Math.min(30000, (2**reconnects * 1000) + Math.random()*1000)); reconnects++; };
-        
+        ws.onopen = () => { setWS(true); reconnects = 0; textarea.dispatchEvent(new Event('input')); };
+        ws.onclose = () => { setWS(false); ws = null; lock(true); setTimeout(connect, Math.min(30000, (2**reconnects * 1000) + Math.random()*1000)); reconnects++; };
         ws.onmessage = async (e) => { 
-            const d = JSON.parse(e.data); 
-            if(d.payload) { 
-                const decText = await decrypt(d.payload);
-                const p = JSON.parse(decText); 
-                if(p.type==="sys_status") setPC(p.content, p.hw||"CPU"); 
-                else handleP(p.type, p.content); 
-            } 
+            try {
+                const d = JSON.parse(e.data); 
+                if(d.payload) { 
+                    const p = JSON.parse(await decrypt(d.payload)); 
+                    if(p.type === "sys_status") {
+                        setPC(p.content, p.hw || "CPU");
+                        if(p.content === "online") fetchModels();
+                    }
+                    else handlePacket(p.type, p.content, p); 
+                } 
+            } catch (err) {}
         };
     }
 
     function setWS(o) { document.getElementById('web-dot').className = `dot ${o?'green':'red'}`; if(!o) setPC('offline'); }
-    function setPC(s, h) { document.getElementById('pc-dot').className = `dot ${s==='online'?'green':s==='offline'?'red':'gray'}`; const c = document.getElementById('hw-chip'); if(s==='online') { c.textContent = h; c.className = `hw-chip ${h==='GPU'?'hw-gpu':'hw-cpu'}`; } else { c.textContent = 'OFF'; c.className = 'hw-chip hw-none'; } }
-
-    function pruneHistory() {
-        if(history.length > 50) history = history.slice(history.length - 50);
+    function setPC(s, h) { 
+        document.getElementById('pc-dot').className = `dot ${s==='online'?'green':s==='offline'?'red':'gray'}`; 
+        const chip = document.getElementById('hw-chip');
+        if(s==='online') { chip.textContent = h; chip.className = `hw-chip ${h==='GPU'?'hw-gpu':'hw-cpu'}`; chip.style.display = 'inline-block'; } 
+        else { chip.style.display = 'none'; modelSelector.disabled = true; modelSelector.innerHTML = '<option>سرور خاموش</option>'; } 
     }
 
-    function render() {
-        pruneHistory();
-        const win = document.getElementById('chat-window'); const scroll = Math.abs(win.scrollHeight - win.clientHeight - win.scrollTop) <= 150;
-        win.innerHTML = '';
-        history.forEach((m, i) => {
-            const r = document.createElement('div'); r.className = 'msg-row';
-            if(m.role==='sys') r.innerHTML = `<div style="text-align:center; margin:5px 0;"><span style="background:rgba(255,255,255,0.05); padding:4px 12px; border-radius:12px; font-size:11px; color:var(--text-sec);">${m.content}</span></div>`;
-            else if(m.role==='user') r.innerHTML = `<div style="display:flex; align-items:center; gap:8px; font-size:12px; font-weight:600; color:var(--text-sec); margin-bottom:8px;">شما <div class="avatar avatar-user">U</div></div><div class="user-bubble">${m.content.replace(/</g,'&lt;')}</div>`;
-            else {
-                const isL = i === history.length - 1; let html = "";
-                if(isL && isT) html = `<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot" style="animation-delay:0.2s"></div><div class="typing-dot" style="animation-delay:0.4s"></div></div>`;
-                else if(isL && isS) html = m.content.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/\n/g,"<br>");
-                else html = DOMPurify.sanitize(marked.parse(m.content));
-                r.innerHTML = `<div style="display:flex; align-items:center; gap:8px; font-size:12px; font-weight:600; color:var(--text-sec); margin-bottom:8px;"><div class="avatar avatar-ai">AI</div> هوش مصنوعی</div><div class="ai-bubble" dir="auto">${html}</div>`;
-            }
-            win.appendChild(r);
-        });
-        if(scroll) win.scrollTop = win.scrollHeight;
+    async function fetchModels() {
+        if(!ws || ws.readyState !== 1) return;
+        modelSelector.innerHTML = '<option>دریافت مدل‌ها...</option>';
+        try { ws.send(JSON.stringify({payload: await encrypt(JSON.stringify({type: "get_models"}))})); } catch(e) {}
     }
 
-    function handleP(t, c) {
-        if(t==="status" && c==="thinking") { isT = true; history.push({role:'ai', content:""}); render(); resetWatchdog(); }
-        else if(t==="chunk") { isT = false; if(!isS) { isS = true; if(history[history.length-1].role==='ai') history[history.length-1].content = c; else history.push({role:'ai', content:c}); } else history[history.length-1].content += c; render(); resetWatchdog(); }
-        else if(t==="done" || t==="full") { isS = false; isT = false; if(watchdog) clearTimeout(watchdog); if(t==="full") { if(history[history.length-1].role==='ai' && !history[history.length-1].content) history[history.length-1].content = c; else history.push({role:'ai', content:c}); } lock(false); render(); }
-        else if(t==="queue") { if(history[history.length-1].content !== c) { history.push({role:'sys', content:c}); render(); } }
-        else if(t==="error") { isS = false; isT = false; if(watchdog) clearTimeout(watchdog); if(history[history.length-1].role==='ai' && !history[history.length-1].content) history.pop(); if(history[history.length-1].content !== `❌ ${c}`) history.push({role:'sys', content: `❌ ${c}`}); lock(false); render(); }
+    async function unloadModels() {
+        if(!ws || ws.readyState !== 1) return;
+        appendSystemMessage("در حال ارسال دستور تخلیه RAM/VRAM...");
+        try { ws.send(JSON.stringify({payload: await encrypt(JSON.stringify({type: "unload_models"}))})); } catch(e) {}
     }
 
-    function lock(l) { document.getElementById('msgInput').disabled = l; document.getElementById('sendBtn').disabled = l; if(!l && window.innerWidth>768) setTimeout(()=>document.getElementById('msgInput').focus(),100); }
+    function handlePacket(t, c, p) {
+        if(t === "models_list") {
+            modelSelector.innerHTML = '';
+            if(p.models && p.models.length > 0) {
+                p.models.forEach(m => { const opt = document.createElement('option'); opt.value = m.id; opt.textContent = m.id.split('/').pop(); modelSelector.appendChild(opt); });
+                modelSelector.disabled = false;
+            } else { modelSelector.innerHTML = '<option value="">مدل پیش‌فرض</option>'; modelSelector.disabled = false; }
+        }
+        else if(t === "tool_event") { appendSystemMessage(`🛠 ابزار: ${c}`, true); resetWatchdog(); } 
+        else if(t === "status" && c === "thinking") { isS = true; createAiMessageContainer(); updateAiMessage("", true, true); resetWatchdog(); }
+        else if(t === "chunk") { if(!isS) { isS = true; createAiMessageContainer(); } updateAiMessage(currentAiContent + c, true, false); resetWatchdog(); }
+        else if(t === "done" || t === "full") { 
+            isS = false; if(watchdog) clearTimeout(watchdog); 
+            if(t === "full") { createAiMessageContainer(); updateAiMessage(c, false, false); }
+            else { updateAiMessage(currentAiContent, false, false); } 
+            currentAiBubble = null; lock(false); 
+        }
+        else if(t === "queue") { appendSystemMessage(c); }
+        else if(t === "error") { 
+            isS = false; if(watchdog) clearTimeout(watchdog); 
+            if(currentAiBubble && currentAiContent === "") { currentAiBubble.parentElement.remove(); currentAiBubble = null; }
+            appendSystemMessage(`❌ ${c}`); lock(false); 
+        }
+    }
+
+    function lock(l) { 
+        textarea.disabled = l; modelSelector.disabled = l; document.getElementById('imageInput').disabled = l;
+        sendBtn.disabled = l || (textarea.value.trim().length === 0 && !currentImageB64); 
+        if(!l && window.innerWidth > 768) setTimeout(() => textarea.focus(), 100); 
+    }
     
     async function sendMessage() {
-        const i = document.getElementById('msgInput'); const t = i.value.trim(); if(!t || !ws || ws.readyState !== 1) return;
-        lock(true); history.push({role:'user', content:t}); render();
+        const text = textarea.value.trim(); 
+        if((!text && !currentImageB64) || !ws || ws.readyState !== 1) return;
+        
+        const selectedModel = modelSelector.value;
+        const imgToPass = currentImageB64; 
+        
+        lock(true); 
+        appendUserMessage(text, imgToPass);
+        
+        textarea.value = ''; textarea.style.height = '44px';
+        removeImage(); 
         
         try {
-            const encPayload = await encrypt(JSON.stringify({type:"chat", text:t}));
-            ws.send(JSON.stringify({payload: encPayload}));
-        } catch (e) {
-            console.error("Send failed:", e);
-            lock(false);
-            return;
-        }
-        i.value = '';
+            const payload = JSON.stringify({ type: "chat", text: text, model: selectedModel, image: imgToPass, use_tools: useTools });
+            ws.send(JSON.stringify({payload: await encrypt(payload)}));
+        } catch (e) { appendSystemMessage("خطا در رمزنگاری."); lock(false); }
     }
     
-    document.getElementById('msgInput').onkeypress = (e) => { if(e.key==='Enter') sendMessage(); };
     setInterval(() => { if(ws?.readyState===1) ws.send(JSON.stringify({type:"ping"})); }, 20000);
-    
-    window.onload = async () => {
-        await initCrypto();
-        connect();
-    };
+    window.onload = async () => { await initCrypto(); connect(); };
 </script>
 </body>
 </html>
