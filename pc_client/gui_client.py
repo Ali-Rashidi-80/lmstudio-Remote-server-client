@@ -304,13 +304,14 @@ class BridgeManager(QThread):
 
     async def heartbeat_task(self):
         """Maintain connection via ping/pong."""
-        while self.running and self.ws and not self.ws.closed:
-            try:
-                async with asyncio.timeout(2.0):
-                    async with self.ws_send_lock:
-                        await self.ws.send(json.dumps({"type": "ping"}))
-            except Exception:  # pylint: disable=broad-exception-caught
-                pass
+        while self.running:
+            if self.ws:
+                try:
+                    async with asyncio.timeout(2.0):
+                        async with self.ws_send_lock:
+                            await self.ws.send(json.dumps({"type": "ping"}))
+                except Exception:  # pylint: disable=broad-exception-caught
+                    pass
             await asyncio.sleep(15)
 
     async def start_ws(self):

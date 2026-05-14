@@ -1,4 +1,3 @@
-#PC Client/Worker
 """Main PC Worker process for AI Workspace Enterprise."""
 
 import ast
@@ -56,6 +55,9 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S"
 )
 logger = logging.getLogger("Core")
+
+# غیرفعال کردن لاگ‌های تکراری و مزاحم کتابخانه httpx (جلوگیری از اسپم کنسول هر ۵ ثانیه)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 # ==========================================
@@ -165,7 +167,7 @@ async def send_packet(
     extra_data: dict = None
 ):
     """Send an encrypted packet through the WebSocket."""
-    if ws.closed:
+    if ws is None:
         return
 
     payload_dict = {"type": msg_type, "content": content}
@@ -338,7 +340,7 @@ async def hw_monitor(ws: Any):
     lm_host = get_lm_host()
     last_status = None
 
-    while not ws.closed:
+    while True:
         try:
             current_status = "OFF"
             resp = await global_http_client.get(
@@ -391,7 +393,7 @@ async def hw_monitor(ws: Any):
 # ==========================================
 async def heartbeat_task(ws: Any):
     """Keep the WebSocket connection alive."""
-    while not ws.closed:
+    while True:
         try:
             async with asyncio.timeout(2.0):
                 async with ws_send_lock:
