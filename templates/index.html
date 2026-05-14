@@ -107,6 +107,7 @@
         align-items: center; z-index: 50; box-shadow: 0 4px 30px rgba(0,0,0,0.05); flex-wrap: wrap; gap: 10px;
     }
     
+    .header-brand { display: flex; align-items: center; gap: 14px; }
     .title { font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px; color: var(--text-pri); white-space: nowrap; letter-spacing: -0.5px; }
     .title-icon { background: linear-gradient(135deg, var(--accent), #3b82f6); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-size: 20px; }
 
@@ -115,18 +116,18 @@
     .icon-btn {
         background: transparent; color: var(--text-sec); border: 1px solid var(--border);
         width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-        cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); font-size: 14px;
+        cursor: pointer; transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); font-size: 14px;
     }
-    .icon-btn:hover { background: rgba(128,128,128,0.1); color: var(--text-pri); transform: scale(1.05); }
-    .icon-btn:active { transform: scale(0.95); }
+    .icon-btn:hover { background: rgba(128,128,128,0.1); color: var(--text-pri); transform: scale(1.08); }
+    .icon-btn:active { transform: scale(0.92); }
 
     .header-btn {
         background: transparent; color: var(--text-sec); border: 1px solid var(--border);
         padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer;
-        display: flex; align-items: center; gap: 6px; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex; align-items: center; gap: 6px; transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
-    .header-btn:hover:not(:disabled) { background: rgba(128,128,128,0.1); color: var(--text-pri); transform: scale(1.02); }
-    .header-btn:active:not(:disabled) { transform: scale(0.96); }
+    .header-btn:hover:not(:disabled) { background: rgba(128,128,128,0.1); color: var(--text-pri); transform: scale(1.03); }
+    .header-btn:active:not(:disabled) { transform: scale(0.95); }
     .header-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .header-btn.danger:hover { background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.3); }
     .header-btn.active { background: rgba(16, 185, 129, 0.1); color: var(--accent); border-color: rgba(16, 185, 129, 0.3); }
@@ -159,8 +160,10 @@
     .welcome-container h2 { font-size: 24px; font-weight: 800; margin-bottom: 12px; min-height: 36px; color: var(--text-pri); }
     .welcome-container p { font-size: 15px; color: var(--text-sec); max-width: 500px; line-height: 1.6; opacity: 0; transform: translateY(10px); transition: opacity 0.8s ease, transform 0.8s ease; }
     .welcome-container p.show { opacity: 1; transform: translateY(0); }
+    
     .typewriter-text { border-right: 2px solid var(--accent); padding-right: 4px; animation: blinkCursor 0.8s steps(40) infinite normal; }
     html[dir="ltr"] .typewriter-text { border-right: none; border-left: 2px solid var(--accent); padding-right: 0; padding-left: 4px; }
+    
     @keyframes blinkCursor { from, to { border-color: transparent } 50% { border-color: var(--accent); } }
     @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -182,7 +185,7 @@
     .ai-bubble p { margin-bottom: 12px; word-break: break-word;}
     .ai-bubble p:last-child { margin-bottom: 0; }
     
-    /* Skeletons */
+    /* Shimmering Skeletons for AI Loading */
     .skeleton-wrapper { display: flex; flex-direction: column; gap: 10px; width: 100%; padding: 5px 0;}
     .skeleton-line { height: 12px; background: var(--border); border-radius: 6px; position: relative; overflow: hidden; opacity: 0.7;}
     .skeleton-line::after { content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent); animation: shimmer 1.5s infinite; }
@@ -212,25 +215,25 @@
 
     #input-container { 
         padding: 16px 15px calc(16px + env(safe-area-inset-bottom)); 
-        background: var(--bg-panel); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); 
+        background: var(--bg-panel); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); 
         border-top: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; z-index: 50; 
     }
     #image-preview-container { display: none; width: 100%; max-width: 850px; margin-bottom: 12px; position: relative; }
     #image-preview-container img { height: 64px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-    .remove-image-btn { position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+    .remove-image-btn { position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
     html[dir="ltr"] .remove-image-btn { right: auto; left: -6px; }
     .remove-image-btn:hover { transform: scale(1.15); }
     
     .input-wrapper { width: 100%; max-width: 850px; display: flex; align-items: flex-end; gap: 8px; background: var(--bg-main); border: 1px solid var(--border); border-radius: 24px; padding: 6px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); transition: border-color 0.3s, box-shadow 0.3s; }
     .input-wrapper:focus-within { border-color: var(--accent); box-shadow: 0 8px 30px rgba(16, 185, 129, 0.1); }
     
-    .attach-btn { background: transparent; color: var(--text-sec); border: none; padding: 10px; cursor: pointer; border-radius: 18px; transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: center; margin-bottom: 2px; }
+    .attach-btn { background: transparent; color: var(--text-sec); border: none; padding: 10px; cursor: pointer; border-radius: 18px; transition: 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); display: flex; align-items: center; justify-content: center; margin-bottom: 2px; }
     .attach-btn:hover { background: rgba(128,128,128,0.1); color: var(--text-pri); }
     
     #msgInput { flex: 1; padding: 10px 8px; background: transparent; border: none; color: var(--text-pri); outline: none; font-size: 15px; font-family: inherit; resize: none; min-height: 44px; max-height: 150px; overflow-y: auto; line-height: 1.6; }
     #msgInput::placeholder { color: var(--text-muted); }
     
-    #sendBtn { background: var(--accent); color: white; border: none; border-radius: 18px; min-width: 44px; height: 44px; margin-bottom: 0px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); flex-shrink: 0; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35); }
+    #sendBtn { background: var(--accent); color: white; border: none; border-radius: 18px; min-width: 44px; height: 44px; margin-bottom: 0px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); flex-shrink: 0; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35); }
     #sendBtn:hover:not(:disabled) { background: #059669; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(5, 150, 105, 0.4); }
     #sendBtn:active:not(:disabled) { transform: scale(0.92); }
     #sendBtn:disabled { background: var(--bg-user); color: var(--text-muted); cursor: not-allowed; box-shadow: none; border: 1px solid var(--border); }
@@ -242,7 +245,7 @@
     #aboutModal.visible .modal-content { transform: translateY(0) scale(1); }
     .modal-content h2 { margin-bottom: 12px; color: var(--text-pri); font-weight: 800; font-size: 20px;}
     .modal-content p { color: var(--text-sec); font-size: 14px; margin-bottom: 24px; line-height: 1.7; }
-    .close-modal { background: var(--bg-user); color: var(--text-pri); border: 1px solid var(--border); padding: 10px 28px; border-radius: 14px; cursor: pointer; font-weight: 600; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+    .close-modal { background: var(--bg-user); color: var(--text-pri); border: 1px solid var(--border); padding: 10px 28px; border-radius: 14px; cursor: pointer; font-weight: 600; transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
     .close-modal:hover { background: var(--border); transform: scale(1.05); }
 
     /* Sidebar History Styles */
@@ -265,7 +268,7 @@
     .new-chat-btn {
         margin: 20px 15px 10px 15px; padding: 14px; background: rgba(16, 185, 129, 0.1); color: var(--accent);
         border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 14px; font-weight: 700; font-size: 14px;
-        cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer; transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
     .new-chat-btn:hover { background: var(--accent); color: white; transform: translateY(-2px); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2); }
     .new-chat-btn:active { transform: scale(0.96); }
@@ -299,6 +302,9 @@
     ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
     @media (max-width: 650px) {
+        #header { padding: 10px 15px; }
+        .header-brand { gap: 8px; }
+        .status-area { gap: 6px; }
         .title { font-size: 15px; }
         .header-btn span { display: none; }
         .header-btn { padding: 8px; border-radius: 50%; width: 36px; height: 36px; justify-content: center; }
@@ -326,9 +332,13 @@
     </div>
 
     <div id="header">
-        <div class="title"><span class="title-icon">✦</span> <span id="lbl-title">AI Workspace</span></div>
+        <div class="header-brand">
+            <button class="icon-btn" onclick="toggleSidebar()" id="sidebarToggleBtn" title="تاریخچه گفتگوها">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
+            <div class="title"><span class="title-icon">✦</span> <span id="lbl-title">AI Workspace</span></div>
+        </div>
         <div class="status-area">
-            <button class="icon-btn" onclick="toggleSidebar()" title="تاریخچه">☰</button>
             <button class="icon-btn" onclick="toggleTheme()" id="themeBtn" title="تغییر تم">🌙</button>
             <button class="icon-btn" onclick="toggleLanguage()" id="langBtn" title="Language" style="font-size: 12px; font-weight: bold;">EN</button>
             <button class="icon-btn" onclick="openAbout()" title="درباره">ℹ️</button>
@@ -368,13 +378,13 @@
         <div class="modal-content">
             <div class="title-icon" style="font-size: 42px; margin-bottom: 15px;">✦</div>
             <h2 id="modal-title">AI Workspace Enterprise</h2>
-            <p id="modal-desc">نسخه 18.0.1 Final<br>طراحی مهندسی‌شده برای پایداری مطلق، همگام‌سازی محتوا و امنیت یکپارچه.</p>
+            <p id="modal-desc">نسخه 18.2 Golden Master<br>بالاترین سطح پایداری و زیبایی با رندر ضد‌فریز، همگام‌سازی کامل و امنیت یکپارچه.</p>
             <button class="close-modal" onclick="closeAbout()" id="modal-close">بستن</button>
         </div>
     </div>
 
 <script>
-    // --- i18n & Theme Logic ---
+    // --- Global State Declarations (Fixing Temporal Dead Zone / Reference Errors) ---
     const dict = {
         fa: {
             title: "فضای کاری هوش مصنوعی", unload: "تخلیه RAM", tools: "ابزارها", placeholder: "پیام خود را بنویسید...",
@@ -384,7 +394,7 @@
             unload_req: "در حال ارسال دستور تخلیه RAM/VRAM...", def_model: "مدل پیش‌فرض", srv_off: "سرور خاموش",
             timeout: "❌ تایم‌اوت در پردازش.", err_enc: "خطا در رمزنگاری.", history: "تاریخچه گفتگوها", new_chat: "گفتگوی جدید",
             quota_err: "⚠️ فضای مرورگر پر شده است. لطفاً از تاریخچه، گفتگوهای قدیمی را پاک کنید.",
-            about_desc: "نسخه 18.0.1 Final<br>مهندسی‌شده برای پایداری مطلق، همگام‌سازی محتوا و زیبایی بصری.", close: "بستن", langToggle: "EN",
+            about_desc: "نسخه 18.2 Golden Master<br>بالاترین سطح پایداری و زیبایی با رندر ضد‌فریز، همگام‌سازی کامل و امنیت یکپارچه.", close: "بستن", langToggle: "EN",
             welcome_title: "به فضای کاری هوشمند خوش آمدید",
             welcome_subtitle: "برای شروع، پیام خود را بنویسید یا یک تصویر بارگذاری کنید. من آماده‌ی کمک هستم."
         },
@@ -396,18 +406,18 @@
             unload_req: "Sending RAM/VRAM unload request...", def_model: "Default Model", srv_off: "Server Offline",
             timeout: "❌ Processing timeout.", err_enc: "Encryption error.", history: "Chat History", new_chat: "New Chat",
             quota_err: "⚠️ Browser storage full. Please delete old chats from history.",
-            about_desc: "Version 18.0.1 Final<br>Engineered for absolute stability, context sync, and visual aesthetics.", close: "Close", langToggle: "FA",
+            about_desc: "Version 18.2 Golden Master<br>Pinnacle of stability and aesthetics with anti-freeze rendering, context sync, and E2E security.", close: "Close", langToggle: "FA",
             welcome_title: "Welcome to AI Workspace",
             welcome_subtitle: "To get started, type a message or upload an image. I'm ready to assist you."
         }
     };
 
-    // --- Global State Declarations (Fixing Temporal Dead Zone / Reference Errors) ---
     let currentLang = localStorage.getItem("lang") || "fa";
     let currentTheme = localStorage.getItem("theme") || "dark";
     let typewriterTimeout = null;
     let saveTimeout = null;
     let renderTimeout = null;
+    let pcIsOnline = false; // State to trigger reliable model loading
 
     let sessions = JSON.parse(localStorage.getItem('ai_sessions')) || {};
     let activeSessionId = localStorage.getItem('ai_active_session');
@@ -432,7 +442,7 @@
     const sendBtn = document.getElementById('sendBtn');
     const chatWindow = document.getElementById('chat-window');
     const modelSelector = document.getElementById('modelSelector');
-
+    const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
 
     // --- Functions Definitions ---
 
@@ -454,6 +464,7 @@
         
         document.getElementById("lbl-title").innerText = dict[lang].title;
         document.getElementById("lbl-history").innerText = dict[lang].history;
+        sidebarToggleBtn.title = dict[lang].history;
         document.getElementById("lbl-new-chat").innerText = "+ " + dict[lang].new_chat;
         document.getElementById("lbl-unload").querySelector('span').innerText = dict[lang].unload;
         document.getElementById("lbl-tools").innerText = dict[lang].tools;
@@ -833,7 +844,6 @@
             scrollToBottom(); 
         } else { 
             if (isStreaming) {
-                // Anti-Freeze DOM Render Throttling (Limits to ~15fps during generation)
                 if (!renderTimeout) {
                     renderTimeout = setTimeout(() => {
                         if(targetBubble) targetBubble.innerHTML = window.marked.parse(currentAiContent, true);
@@ -842,7 +852,6 @@
                     }, 60); 
                 }
             } else {
-                // Final render (Immediate)
                 if (renderTimeout) { clearTimeout(renderTimeout); renderTimeout = null; }
                 requestAnimationFrame(() => { 
                     if(targetBubble) targetBubble.innerHTML = window.marked.parse(currentAiContent, false); 
@@ -889,9 +898,11 @@
                 if(d.payload) { 
                     const p = JSON.parse(await decrypt(d.payload)); 
                     if(p.type === "sys_status") { 
-                        const wasOffline = document.getElementById('hw-chip').style.display === 'none';
+                        const isNowOnline = (p.content === "online");
                         setPC(p.content, p.hw || "CPU"); 
-                        if(p.content === "online" && wasOffline) fetchModels(); 
+                        // Reliable state-driven model fetching
+                        if(isNowOnline && !pcIsOnline) fetchModels(); 
+                        pcIsOnline = isNowOnline;
                     }
                     else handlePacket(p.type, p.content, p); 
                 } 

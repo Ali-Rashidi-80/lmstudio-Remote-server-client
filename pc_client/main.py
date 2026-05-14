@@ -55,7 +55,10 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S"
 )
 logger = logging.getLogger("Core")
+
+# مسدود کردن لاگ‌های اسپم‌گونه و تکراری (درخواست‌های ۵ ثانیه‌ای مانیتورینگ)
 logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
 # ==========================================
@@ -505,22 +508,39 @@ async def run_ai(
         async with asyncio.timeout(llm_timeout):
             m_key = requested_model if requested_model else lm_cfg.get("model_key")
 
+            # Context reconstruction from Web/GUI payloads
             if req_history and isinstance(req_history, list):
-                reconstructed = [{"role": "system", "content": lm_cfg.get("system_prompt", "") + ("\nشما مجاز به استفاده از ابزارها هستید." if use_tools else "")}]
+                sys_str = lm_cfg.get("system_prompt", "")
+                if use_tools:
+                    sys_str += "\nشما مجاز به استفاده از ابزارها هستید."
+                
+                reconstructed = [{"role": "system", "content": sys_str}]
                 for m in req_history:
                     if m.get("role") == "user":
                         if m.get("image"):
                             reconstructed.append({
-                                "role": "user", 
+                                "role": "user",
                                 "content": [
-                                    {"type": "text", "text": m["content"] if m["content"] else "تصویر را بررسی کن."}, 
-                                    {"type": "image_url", "image_url": {"url": m["image"]}}
+                                    {
+                                        "type": "text",
+                                        "text": m.get("content") or "تصویر را بررسی کن."
+                                    },
+                                    {
+                                        "type": "image_url",
+                                        "image_url": {"url": m["image"]}
+                                    }
                                 ]
                             })
                         else:
-                            reconstructed.append({"role": "user", "content": m.get("content", "")})
+                            reconstructed.append({
+                                "role": "user",
+                                "content": m.get("content", "")
+                            })
                     elif m.get("role") == "ai":
-                        reconstructed.append({"role": "assistant", "content": m.get("content", "")})
+                        reconstructed.append({
+                            "role": "assistant",
+                            "content": m.get("content", "")
+                        })
                 
                 active_chats[client_id] = reconstructed
             else:
