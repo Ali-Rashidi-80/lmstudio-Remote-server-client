@@ -181,11 +181,12 @@ DICT = {
         "err_img": "❌ خطا: فایل انتخاب شده تصویر معتبری نیست.",
         "def_model": "مدل پیش‌فرض",
         "err_conn": "ارتباط قطع است.",
+        "clear_chat": "پاک کردن / گفتگوی جدید",
         "about_title": "درباره AI Workspace",
         "about_desc": (
             "<h2 style='color:#10b981;'>AI Workspace Enterprise</h2>"
-            "<p>نسخه 17.2 Final<br>توسعه یافته برای ارتباط امن و پردازش "
-            "سریع با رمزنگاری سراسری.</p>"
+            "<p>نسخه 17.6 Final<br>تضمین پایداری مطلق، همگام‌سازی "
+            "محتوا و ارتباط رمزنگاری شده.</p>"
         ),
         "close": "بستن",
         "processing": "در حال پردازش",
@@ -208,11 +209,12 @@ DICT = {
         "err_img": "❌ Error: Invalid image file.",
         "def_model": "Default Model",
         "err_conn": "Connection lost.",
+        "clear_chat": "Clear Chat / New Chat",
         "about_title": "About AI Workspace",
         "about_desc": (
             "<h2 style='color:#10b981;'>AI Workspace Enterprise</h2>"
-            "<p>Version 17.2 Final<br>Developed for secure communication "
-            "and fast processing with E2E encryption.</p>"
+            "<p>Version 17.6 Final<br>Absolute stability, context "
+            "synchronization, and secure E2E encryption.</p>"
         ),
         "close": "Close",
         "processing": "Processing",
@@ -495,6 +497,11 @@ class ModernChatWindow(QMainWindow):
         self.lang_btn.setFixedSize(36, 36)
         self.lang_btn.clicked.connect(self.toggle_lang)
 
+        self.clear_btn = QPushButton("🗑")
+        self.clear_btn.setObjectName("ActionBtn")
+        self.clear_btn.setFixedSize(36, 36)
+        self.clear_btn.clicked.connect(self.clear_chat)
+
         self.about_btn = QPushButton("ℹ️")
         self.about_btn.setObjectName("ActionBtn")
         self.about_btn.setFixedSize(36, 36)
@@ -516,6 +523,7 @@ class ModernChatWindow(QMainWindow):
 
         right_panel.addWidget(self.theme_btn)
         right_panel.addWidget(self.lang_btn)
+        right_panel.addWidget(self.clear_btn)
         right_panel.addWidget(self.about_btn)
         right_panel.addWidget(self.tools_btn)
         right_panel.addWidget(self.model_combo)
@@ -588,6 +596,13 @@ class ModernChatWindow(QMainWindow):
         self.apply_theme()
         self.apply_lang()
 
+    def clear_chat(self):
+        """Clear current chat history and sync with server."""
+        self.chat_history.clear()
+        self.update_ui()
+        if self.bridge.is_connected:
+            self.bridge.send_msg({"type": "clear_history"})
+
     def apply_theme(self):
         """Apply dark or light theme dynamically."""
         if self.current_theme == "dark":
@@ -612,6 +627,7 @@ class ModernChatWindow(QMainWindow):
         self.setWindowTitle(d["title"])
         self.title_label.setText(f"✦ {d['title']}")
         self.tools_btn.setText(d["tools"])
+        self.clear_btn.setToolTip(d["clear_chat"])
         self.input_field.setPlaceholderText(d["placeholder"])
         self.send_btn.setText(d["send"])
 
@@ -1012,12 +1028,23 @@ class ModernChatWindow(QMainWindow):
             current_text = self.model_combo.currentText()
             selected_model = current_data if current_data else current_text
 
+            # Prepare history for context sync
+            sync_history = []
+            for msg in self.chat_history:
+                if msg["role"] in ["user", "ai"]:
+                    sync_history.append({
+                        "role": msg["role"],
+                        "content": msg["content"],
+                        "image": msg.get("image")
+                    })
+
             payload = {
                 "type": "chat",
                 "text": text,
                 "model": selected_model,
                 "use_tools": self.tools_btn.isChecked(),
-                "image": img_to_pass
+                "image": img_to_pass,
+                "history": sync_history
             }
 
             if self.bridge.send_msg(payload):

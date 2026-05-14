@@ -23,7 +23,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("Bridge")
 
-app = FastAPI(title="AI Bridge (Enterprise V17.2 Final)")
+app = FastAPI(title="AI Bridge (Enterprise V17.4 Ultimate)")
 os.makedirs("templates", exist_ok=True)
 templates = Jinja2Templates(directory="templates")
 
@@ -53,7 +53,7 @@ class ConnectionManager:
             if self.pc_client:
                 try:
                     await self.pc_client.close(code=1000)
-                except Exception:  # pylint: disable=broad-exception-caught
+                except Exception:
                     pass
             self.pc_client = websocket
         logger.info("🟢 PC Node Linked.")
@@ -65,7 +65,7 @@ class ConnectionManager:
             if client_id in self.user_clients:
                 try:
                     await self.user_clients[client_id].close(code=1000)
-                except Exception:  # pylint: disable=broad-exception-caught
+                except Exception:
                     pass
             self.user_clients[client_id] = websocket
             self.user_locks[client_id] = asyncio.Lock()
@@ -87,8 +87,24 @@ class ConnectionManager:
         logger.warning("🔴 PC Node Offline.")
         self.create_safe_task(self.broadcast_sys_status(False, "CPU"))
 
+    async def delayed_cancel(self, client_id: str):
+        """Wait 30s before cancelling to survive page refreshes/network drops."""
+        await asyncio.sleep(30.0)
+        is_offline = False
+        async with self.dict_lock:
+            if client_id not in self.user_clients:
+                is_offline = True
+        
+        if is_offline:
+            cancel_msg = json.dumps({
+                "type": "sys_cancel",
+                "content": "user_left"
+            })
+            enc_msg = encrypt_message(cancel_msg)
+            await self.send_to_pc_raw(client_id, enc_msg)
+
     async def disconnect_user(self, client_id: str):
-        """Unregister a user connection securely."""
+        """Unregister a user connection securely with grace period."""
         ws = None
         async with self.dict_lock:
             ws = self.user_clients.pop(client_id, None)
@@ -98,14 +114,8 @@ class ConnectionManager:
 
         if ws and self.pc_client:
             if self.pc_client.client_state == WebSocketState.CONNECTED:
-                cancel_msg = json.dumps({
-                    "type": "sys_cancel",
-                    "content": "user_left"
-                })
-                enc_msg = encrypt_message(cancel_msg)
-                self.create_safe_task(
-                    self.send_to_pc_raw(client_id, enc_msg)
-                )
+                # Trigger a delayed cancel to survive micro-drops / F5 refreshes
+                self.create_safe_task(self.delayed_cancel(client_id))
 
     async def broadcast_sys_status(self, is_online: bool, hw_mode: str):
         """Broadcast system status to all connected users."""
@@ -144,7 +154,7 @@ class ConnectionManager:
                         "client_id": client_id,
                         "payload": encrypted_payload
                     })
-                except Exception as e:  # pylint: disable=broad-exception-caught
+                except Exception as e:
                     logger.warning("Failed sending to PC: %s", e)
                     self.create_safe_task(self.disconnect_pc())
         else:
@@ -166,7 +176,7 @@ class ConnectionManager:
             async with lock:
                 try:
                     await ws.send_json({"payload": encrypted_payload})
-                except Exception:  # pylint: disable=broad-exception-caught
+                except Exception:
                     self.create_safe_task(self.disconnect_user(client_id))
 
 
@@ -185,8 +195,8 @@ async def index(request: Request):
 
 @app.get("/favicon.ico")
 async def favicon():
-    """Handle favicon requests cleanly."""
-    return Response(status_code=404)
+    """Handle favicon requests cleanly without throwing 404 errors."""
+    return Response(status_code=204)
 
 
 @app.websocket("/ws/pc")
@@ -232,7 +242,7 @@ async def pc_ws(websocket: WebSocket):
                 break
     except WebSocketDisconnect:
         logger.info("PC Node disconnected cleanly.")
-    except Exception as e:  # pylint: disable=broad-exception-caught
+    except Exception as e:
         logger.error("PC Connection Dropped: %s", e)
     finally:
         await manager.disconnect_pc()
@@ -262,7 +272,7 @@ async def user_ws(websocket: WebSocket, client_id: str):
         logger.info("User %s timed out.", client_id)
     except WebSocketDisconnect:
         pass
-    except Exception as e:  # pylint: disable=broad-exception-caught
+    except Exception as e:
         logger.warning("User %s connection dropped: %s", client_id, e)
     finally:
         await manager.disconnect_user(client_id)

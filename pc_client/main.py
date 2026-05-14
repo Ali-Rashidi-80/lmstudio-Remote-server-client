@@ -55,8 +55,6 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S"
 )
 logger = logging.getLogger("Core")
-
-# غیرفعال کردن لاگ‌های تکراری و مزاحم کتابخانه httpx (جلوگیری از اسپم کنسول هر ۵ ثانیه)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
@@ -480,7 +478,8 @@ async def run_ai(
     user_text: str,
     requested_model: str,
     image_b64: str = None,
-    use_tools: bool = False
+    use_tools: bool = False,
+    req_history: list = None
 ):
     """Run the main AI chat loop."""
     cfg = _CACHED_CFG
@@ -506,37 +505,56 @@ async def run_ai(
         async with asyncio.timeout(llm_timeout):
             m_key = requested_model if requested_model else lm_cfg.get("model_key")
 
-            if client_id not in active_chats:
-                sys_prompt = lm_cfg.get("system_prompt", "")
-                if use_tools:
-                    sys_prompt += "\nشما مجاز به استفاده از ابزارها هستید."
-                active_chats[client_id] = [
-                    {"role": "system", "content": sys_prompt}
-                ]
-
-            if image_b64:
-                if not image_b64.startswith("data:image"):
-                    image_b64 = f"data:image/jpeg;base64,{image_b64}"
-
-                fallback_txt = "تصویر را بررسی کن."
-                active_chats[client_id].append({
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": user_text if user_text else fallback_txt
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": image_b64}
-                        }
-                    ]
-                })
+            if req_history and isinstance(req_history, list):
+                reconstructed = [{"role": "system", "content": lm_cfg.get("system_prompt", "") + ("\nشما مجاز به استفاده از ابزارها هستید." if use_tools else "")}]
+                for m in req_history:
+                    if m.get("role") == "user":
+                        if m.get("image"):
+                            reconstructed.append({
+                                "role": "user", 
+                                "content": [
+                                    {"type": "text", "text": m["content"] if m["content"] else "تصویر را بررسی کن."}, 
+                                    {"type": "image_url", "image_url": {"url": m["image"]}}
+                                ]
+                            })
+                        else:
+                            reconstructed.append({"role": "user", "content": m.get("content", "")})
+                    elif m.get("role") == "ai":
+                        reconstructed.append({"role": "assistant", "content": m.get("content", "")})
+                
+                active_chats[client_id] = reconstructed
             else:
-                active_chats[client_id].append({
-                    "role": "user",
-                    "content": user_text[:10000]
-                })
+                if client_id not in active_chats:
+                    sys_prompt = lm_cfg.get("system_prompt", "")
+                    if use_tools:
+                        sys_prompt += "\nشما مجاز به استفاده از ابزارها هستید."
+                    active_chats[client_id] = [
+                        {"role": "system", "content": sys_prompt}
+                    ]
+
+                if image_b64:
+                    if not image_b64.startswith("data:image"):
+                        image_b64 = f"data:image/jpeg;base64,{image_b64}"
+
+                    fallback_txt = "تصویر را بررسی کن."
+                    active_chats[client_id].append({
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": user_text if user_text else fallback_txt
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": image_b64}
+                            }
+                        ]
+                    })
+                else:
+                    active_chats[client_id].append({
+                        "role": "user",
+                        "content": user_text[:10000]
+                    })
 
             max_hist = cfg["features"]["max_history_messages"]
             active_chats[client_id] = prune_chat_history(
@@ -831,6 +849,15 @@ async def pc_worker():
                                         active_tasks[cid].cancel()
                                     active_chats.pop(cid, None)
 
+                                elif msg_type == "clear_history":
+                                    if cid in active_tasks:
+                                        active_tasks[cid].cancel()
+                                    active_chats.pop(cid, None)
+                                    await send_packet(
+                                        ws, cid, "queue",
+                                        "✅ تاریخچه سرور پردازشی پاک شد."
+                                    )
+
                                 elif msg_type == "get_models":
                                     asyncio.create_task(
                                         handle_get_models(ws, cid)
@@ -856,7 +883,8 @@ async def pc_worker():
                                                 user_text=dec.get("text", ""),
                                                 requested_model=req_model,
                                                 image_b64=dec.get("image"),
-                                                use_tools=has_tools
+                                                use_tools=has_tools,
+                                                req_history=dec.get("history")
                                             )
                                         )
                     finally:
