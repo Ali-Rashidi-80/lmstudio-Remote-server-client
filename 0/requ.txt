@@ -1,0 +1,13 @@
+fastapi
+openai
+cryptography
+uvicorn
+websockets
+python-multipart
+jinja2
+pydantic-settings
+requests
+httpx
+markdown
+pygments
+certifi

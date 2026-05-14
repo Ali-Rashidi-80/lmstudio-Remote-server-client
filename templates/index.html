@@ -1,167 +1,246 @@
-
 <!DOCTYPE html>
-
 <html lang="fa" dir="rtl">
-
 <head>
-
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>AI Workspace</title>
+    
+     <!-- اسکریپت‌های جایگزین برای کار بدون تحریم و بدون نیاز به اینترنت -->
+     <script>
+        // موتور رندر Markdown فوق‌سبک و محلی (جایگزین Marked.js در زمان قطعی نت)
+        window.marked = {
+            parse: function(t) {
+                if (!t) return "";
+                let html = t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                
+                // پردازش بلاک‌های کد
+                html = html.replace(/```([a-zA-Z0-9]*)\n([\s\S]*?)```/g, function(match, lang, code) {
+                    let header = lang ? `<div class="code-header">${lang}</div>` : '<div class="code-header">Code</div>';
+                    return `<div class="code-block-wrapper">${header}<pre><code>${code}</code></pre></div>`;
+                });
+                
+                // پردازش کدهای خطی و بولد
+                html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+                html = html.replace(/\*\*([^\*]+)\*\*/g, '<b>$1</b>');
+                
+                // حفظ فاصله خطوط بدون خراب کردن بلاک‌های کد
+                let segments = html.split('<div class="code-block-wrapper">');
+                for(let i=0; i<segments.length; i++) {
+                    let inner = segments[i].split('</pre></div>');
+                    if(inner.length === 1) {
+                        segments[i] = segments[i].replace(/\n/g, '<br>');
+                    } else {
+                        inner[1] = inner[1].replace(/\n/g, '<br>');
+                        segments[i] = inner.join('</pre></div>');
+                    }
+                }
+                return segments.join('<div class="code-block-wrapper">');
+            },
+            setOptions: function() {}
+        };
+        
+        // جایگزین محلی DOMPurify
+        window.DOMPurify = { sanitize: function(h) { return h; }, setConfig: function() {} };
+        // جایگزین محلی Highlight.js
+        window.hljs = { highlightElement: function() {} };
+    </script>
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-    <title>AI Mobile Bridge</title>
-
-    <!-- استفاده از CDN برای Crypto-JS -->
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-
-
-    <style>
-
-        :root { --primary: #007aff; --bg: #f4f4f9; }
-
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto; background: var(--bg); margin: 0; display: flex; flex-direction: column; height: 100vh; }
-
-        #chat-window { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
-
-        .msg { padding: 12px 16px; border-radius: 18px; max-width: 80%; word-wrap: break-word; font-size: 16px; }
-
-        .user { align-self: flex-end; background: var(--primary); color: white; }
-
-        .ai { align-self: flex-start; background: #e5e5ea; color: black; }
-
-        #input-area { padding: 15px; background: white; border-top: 1px solid #ddd; display: flex; gap: 10px; }
-
-        input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 20px; outline: none; }
-
-        button { padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 20px; cursor: pointer; }
-
-    </style>
-
-</head>
+<style>
+    :root {
+        --bg-main: #0d0d0f; --bg-panel: #1a1b1e; --bg-user: #2d2e33; 
+        --accent: #10a37f; --text-pri: #ececf1; --text-sec: #9ca3af; --border: #2b2c31;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg-main); margin: 0; display: flex; flex-direction: column; height: 100vh; height: calc(var(--vh, 1vh) * 100); color: var(--text-pri); overflow: hidden; }
+    #header { background: var(--bg-panel); padding: 15px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .title { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--accent); }
+    .status-badge { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-sec); background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); }
+    .hw-chip { font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 4px; color: #fff; }
+    .hw-gpu { background: #76b900; } .hw-cpu { background: #007acc; } .hw-none { background: #555; }
+    .dot { height: 10px; width: 10px; border-radius: 50%; }
+    .dot.red { background: #ef4444; } .dot.green { background: var(--accent); } .dot.gray { background: #555; }
+    #chat-window { flex: 1; overflow-y: auto; padding: 20px 15px; display: flex; flex-direction: column; gap: 24px; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
+    .msg-row { display: flex; flex-direction: column; width: 100%; animation: slide 0.3s ease; }
+    @keyframes slide { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .avatar { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: white; }
+    .avatar-user { background: #4b5563; } .avatar-ai { background: var(--accent); }
+    .user-bubble { background: var(--bg-user); border: 1px solid var(--border); max-width: 90%; padding: 14px 20px; border-radius: 18px; border-top-right-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+    .ai-bubble { width: 100%; direction: rtl; padding: 0 5px; }
+    .code-block-wrapper { background: #0d1117; border-radius: 12px; border: 1px solid var(--border); margin: 16px 0; overflow: hidden; direction: ltr; text-align: left; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .code-header { display: flex; justify-content: space-between; align-items: center; background: #161b22; padding: 10px 16px; font-size: 12px; color: #8b949e; border-bottom: 1px solid #30363d; font-family: monospace; }
+    .ai-bubble pre { margin: 0; padding: 16px; overflow-x: auto; font-family: 'Consolas', monospace; font-size: 14px; white-space: pre; }
+    code { background: #2b2b2b; color: #ff7b72; padding: 3px 6px; border-radius: 4px; font-family: 'Consolas', monospace; }
+    .typing-indicator { display: inline-flex; gap: 4px; padding: 10px 0; }
+    .typing-dot { width: 6px; height: 6px; background: var(--text-sec); border-radius: 50%; animation: blink 1.4s infinite; }
+    @keyframes blink { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+    #input-area { padding: 18px 20px; background: var(--bg-main); display: flex; gap: 12px; border-top: 1px solid var(--border); }
+    .input-wrapper { flex: 1; display: flex; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 24px; padding: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+    #msgInput { flex: 1; padding: 12px 16px; background: transparent; border: none; color: #fff; outline: none; font-size: 16px; width: 100%; }
+    #sendBtn { background: var(--accent); color: white; border: none; border-radius: 18px; width: 48px; height: 48px; cursor: pointer; transition: 0.2s; }
+    #sendBtn:hover { background: #0d8a6b; }
+    #sendBtn:disabled { background: #374151; color: #6b7280; }
+</style></head>
 
 <body>
-
-
-
-<div id="chat-window"></div>
-
-<div id="input-area">
-
-    <input type="text" id="msgInput" placeholder="پیام خود را بنویسید...">
-
-    <button onclick="sendMessage()">ارسال</button>
-
-</div>
-
-
-
-
+    <div id="header">
+        <div class="title">⚡ AI Workspace</div>
+        <div class="status-box">
+            <div class="status-badge">شما <span id="web-dot" class="dot red"></span></div>
+            <div class="status-badge">سرور <span id="pc-dot" class="dot gray"></span> <span id="hw-chip" class="hw-chip hw-none">OFF</span></div>
+        </div>
+    </div>
+    <div id="chat-window" class="fade-in"></div>
+    <div id="input-area">
+        <div class="input-wrapper">
+            <input type="text" id="msgInput" placeholder="پیام خود را بنویسید..." autocomplete="off" maxlength="6000">
+            <button id="sendBtn" onclick="sendMessage()" title="ارسال پیام">➤</button>
+        </div>
+    </div>
 <script>
-
-    const KEY = CryptoJS.enc.Utf8.parse("12345678901234567890123456789012");
-
+    function setVH() { document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`); }
+    window.addEventListener('resize', setVH); setVH();
     
-
-    // استفاده از ws:// به جای wss:// برای رفع خطای اتصال روی پورت 8000
-
-    // اگر از دامنه استفاده می‌کنید، سعی کنید پورت را حذف کنید یا اگر روی هاست شخصی است، آدرس دقیق را بنویسید
-
-    const wsUrl = "wss://lmstudio.chbk.dev/ws/mobile";
-
-    const ws = new WebSocket(wsUrl);
-
-
-
-    ws.onopen = () => console.log("اتصال با موفقیت برقرار شد!");
-
-    ws.onerror = (err) => console.error("خطای اتصال وب‌ساکت:", err);
-
+    // استفاده از Web Crypto API برای رمزنگاری واقعی AES-CBC
+    const rawKey = "{{ env_key }}";
+    if (!rawKey || rawKey.length < 32) {
+        console.error("Encryption key is invalid or missing. Please check server configuration.");
+        alert("خطای امنیتی: کلید رمزنگاری نامعتبر است.");
+    }
+    let keyStr = rawKey.substring(0, 32);
+    while(keyStr.length < 32) keyStr += '\0';
     
-
-    ws.onmessage = (event) => {
-
+    let cryptoKey = null;
+    
+    async function initCrypto() {
         try {
-
-            const data = JSON.parse(event.data);
-
-            if (data.payload) {
-
-                const decrypted = CryptoJS.AES.decrypt(data.payload, KEY, {
-
-                    mode: CryptoJS.mode.ECB,
-
-                    padding: CryptoJS.pad.Pkcs7
-
-                }).toString(CryptoJS.enc.Utf8);
-
-                renderMessage(decrypted, 'ai');
-
-            }
-
+            const keyData = new TextEncoder().encode(keyStr);
+            cryptoKey = await crypto.subtle.importKey('raw', keyData, { name: 'AES-CBC' }, false, ['encrypt', 'decrypt']);
         } catch (e) {
-
-            console.error("خطا در پردازش پیام:", e);
-
+            console.error('Failed to initialize crypto:', e);
+            alert('خطا در راه‌اندازی رمزنگاری.');
         }
+    }
+    
+    async function encrypt(text) {
+        if (!cryptoKey) await initCrypto();
+        const iv = crypto.getRandomValues(new Uint8Array(16));
+        const data = new TextEncoder().encode(text);
+        const encrypted = await crypto.subtle.encrypt({ name: 'AES-CBC', iv: iv }, cryptoKey, data);
+        const combined = new Uint8Array(iv.length + encrypted.byteLength);
+        combined.set(iv, 0);
+        combined.set(new Uint8Array(encrypted), iv.length);
+        return btoa(String.fromCharCode(...combined));
+    }
+    
+    async function decrypt(base64Str) {
+        if (!cryptoKey) await initCrypto();
+        try {
+            const combined = new Uint8Array(atob(base64Str).split('').map(c => c.charCodeAt(0)));
+            const iv = combined.slice(0, 16);
+            const ciphertext = combined.slice(16);
+            const decrypted = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: iv }, cryptoKey, ciphertext);
+            return new TextDecoder().decode(decrypted);
+        } catch (e) {
+            return '{"type":"error","content":"خطای امنیتی: کلید نامعتبر"}';
+        }
+    }
+    
 
+    let clientId = "web_" + Math.random().toString(36).slice(2, 10);
+    try {
+        if(sessionStorage.getItem('cid')) clientId = sessionStorage.getItem('cid');
+        else sessionStorage.setItem('cid', clientId);
+    } catch(e) {}
+    
+    const wsUrl = `${location.protocol==="https:"?"wss:":"ws:"}//${location.host}/ws/client/${clientId}`;
+    let ws = null, history = [], isS = false, isT = false, reconnects = 0, watchdog = null;
+
+    function resetWatchdog() {
+        if(watchdog) clearTimeout(watchdog);
+        if(isS || isT) watchdog = setTimeout(() => { handleP("error", "تایم‌اوت ارتباط با سرور. لطفا مجدد ارسال کنید."); if(ws) ws.close(); }, 60000);
+    }
+    
+    document.addEventListener("visibilitychange", () => { 
+        if(document.visibilityState==="visible" && ws?.readyState===1) ws.send(JSON.stringify({type:"ping"})); 
+    });
+
+    function connect() {
+        if(ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
+        
+        ws = new WebSocket(wsUrl);
+        ws.onopen = () => { setWS(true); reconnects = 0; if(!history.length) { history.push({role:'sys', content:"ارتباط امن برقرار شد."}); render(); } };
+        ws.onclose = () => { setWS(false); ws = null; setTimeout(connect, Math.min(30000, (2**reconnects * 1000) + Math.random()*1000)); reconnects++; };
+        
+        ws.onmessage = async (e) => { 
+            const d = JSON.parse(e.data); 
+            if(d.payload) { 
+                const decText = await decrypt(d.payload);
+                const p = JSON.parse(decText); 
+                if(p.type==="sys_status") setPC(p.content, p.hw||"CPU"); 
+                else handleP(p.type, p.content); 
+            } 
+        };
+    }
+
+    function setWS(o) { document.getElementById('web-dot').className = `dot ${o?'green':'red'}`; if(!o) setPC('offline'); }
+    function setPC(s, h) { document.getElementById('pc-dot').className = `dot ${s==='online'?'green':s==='offline'?'red':'gray'}`; const c = document.getElementById('hw-chip'); if(s==='online') { c.textContent = h; c.className = `hw-chip ${h==='GPU'?'hw-gpu':'hw-cpu'}`; } else { c.textContent = 'OFF'; c.className = 'hw-chip hw-none'; } }
+
+    function pruneHistory() {
+        if(history.length > 50) history = history.slice(history.length - 50);
+    }
+
+    function render() {
+        pruneHistory();
+        const win = document.getElementById('chat-window'); const scroll = Math.abs(win.scrollHeight - win.clientHeight - win.scrollTop) <= 150;
+        win.innerHTML = '';
+        history.forEach((m, i) => {
+            const r = document.createElement('div'); r.className = 'msg-row';
+            if(m.role==='sys') r.innerHTML = `<div style="text-align:center; margin:5px 0;"><span style="background:rgba(255,255,255,0.05); padding:4px 12px; border-radius:12px; font-size:11px; color:var(--text-sec);">${m.content}</span></div>`;
+            else if(m.role==='user') r.innerHTML = `<div style="display:flex; align-items:center; gap:8px; font-size:12px; font-weight:600; color:var(--text-sec); margin-bottom:8px;">شما <div class="avatar avatar-user">U</div></div><div class="user-bubble">${m.content.replace(/</g,'&lt;')}</div>`;
+            else {
+                const isL = i === history.length - 1; let html = "";
+                if(isL && isT) html = `<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot" style="animation-delay:0.2s"></div><div class="typing-dot" style="animation-delay:0.4s"></div></div>`;
+                else if(isL && isS) html = m.content.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/\n/g,"<br>");
+                else html = DOMPurify.sanitize(marked.parse(m.content));
+                r.innerHTML = `<div style="display:flex; align-items:center; gap:8px; font-size:12px; font-weight:600; color:var(--text-sec); margin-bottom:8px;"><div class="avatar avatar-ai">AI</div> هوش مصنوعی</div><div class="ai-bubble" dir="auto">${html}</div>`;
+            }
+            win.appendChild(r);
+        });
+        if(scroll) win.scrollTop = win.scrollHeight;
+    }
+
+    function handleP(t, c) {
+        if(t==="status" && c==="thinking") { isT = true; history.push({role:'ai', content:""}); render(); resetWatchdog(); }
+        else if(t==="chunk") { isT = false; if(!isS) { isS = true; if(history[history.length-1].role==='ai') history[history.length-1].content = c; else history.push({role:'ai', content:c}); } else history[history.length-1].content += c; render(); resetWatchdog(); }
+        else if(t==="done" || t==="full") { isS = false; isT = false; if(watchdog) clearTimeout(watchdog); if(t==="full") { if(history[history.length-1].role==='ai' && !history[history.length-1].content) history[history.length-1].content = c; else history.push({role:'ai', content:c}); } lock(false); render(); }
+        else if(t==="queue") { if(history[history.length-1].content !== c) { history.push({role:'sys', content:c}); render(); } }
+        else if(t==="error") { isS = false; isT = false; if(watchdog) clearTimeout(watchdog); if(history[history.length-1].role==='ai' && !history[history.length-1].content) history.pop(); if(history[history.length-1].content !== `❌ ${c}`) history.push({role:'sys', content: `❌ ${c}`}); lock(false); render(); }
+    }
+
+    function lock(l) { document.getElementById('msgInput').disabled = l; document.getElementById('sendBtn').disabled = l; if(!l && window.innerWidth>768) setTimeout(()=>document.getElementById('msgInput').focus(),100); }
+    
+    async function sendMessage() {
+        const i = document.getElementById('msgInput'); const t = i.value.trim(); if(!t || !ws || ws.readyState !== 1) return;
+        lock(true); history.push({role:'user', content:t}); render();
+        
+        try {
+            const encPayload = await encrypt(JSON.stringify({type:"chat", text:t}));
+            ws.send(JSON.stringify({payload: encPayload}));
+        } catch (e) {
+            console.error("Send failed:", e);
+            lock(false);
+            return;
+        }
+        i.value = '';
+    }
+    
+    document.getElementById('msgInput').onkeypress = (e) => { if(e.key==='Enter') sendMessage(); };
+    setInterval(() => { if(ws?.readyState===1) ws.send(JSON.stringify({type:"ping"})); }, 20000);
+    
+    window.onload = async () => {
+        await initCrypto();
+        connect();
     };
-
-
-
-
-    function renderMessage(text, type) {
-
-        const div = document.createElement('div');
-
-        div.className = `msg ${type}`;
-
-        div.textContent = text;
-
-        const container = document.getElementById('chat-window'); // اصلاح ID از 'chat' به 'chat-window'
-
-        if (container) {
-
-            container.appendChild(div);
-
-            container.scrollTop = container.scrollHeight;
-
-        }
-
-    }
-
-
-
-
-
-    function sendMessage() {
-
-        const input = document.getElementById('msgInput');
-
-        if (!input.value || ws.readyState !== WebSocket.OPEN) return;
-
-
-
-        const encrypted = CryptoJS.AES.encrypt(input.value, KEY, {
-
-            mode: CryptoJS.mode.ECB,
-
-            padding: CryptoJS.pad.Pkcs7
-
-        }).toString();
-
-
-
-        ws.send(JSON.stringify({ payload: encrypted }));
-
-        renderMessage(input.value, 'user');
-
-        input.value = '';
-
-    }
-
 </script>
-
 </body>
-
 </html>

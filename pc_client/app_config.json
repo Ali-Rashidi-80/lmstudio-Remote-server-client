@@ -1,0 +1,15 @@
+{
+    "lmstudio": {
+        "host": "127.0.0.1:1234",
+        "model_key": "gemma-4-e4b-it-ud",
+        "system_prompt": "شما دستیار هوش مصنوعی هستید. پاسخ‌های دقیق به زبان فارسی ارائه دهید و کدهای برنامه‌نویسی را در بلاک قرار دهید.",
+        "temperature": 0.7,
+        "force_context_length": false
+    },
+    "features": {
+        "use_streaming": true,
+        "max_history_messages": 15,
+        "max_concurrent_requests": 4,
+        "llm_timeout_seconds": 900
+    }
+}

@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+websockets
+lmstudio
+httpx
+pycryptodome
+cryptography
+pydantic
+pydantic-settings
+python-dotenv
+markdown
+jinja2
+python-multipart
+PySide6

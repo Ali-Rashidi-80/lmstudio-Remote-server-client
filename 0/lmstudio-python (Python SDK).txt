@@ -1,0 +1,1770 @@
+lmstudio-python (Python SDK)
+
+
+
+
+https://lmstudio.ai/docs/python/model-info/get-model-info
+
+
+
+
+
+lmstudio-python (Python SDK)
+Getting started with LM Studio's Python SDK
+
+Copy Markdown
+Open
+lmstudio-python provides you a set APIs to interact with LLMs, embeddings models, and agentic flows.
+
+Installing the SDK
+lmstudio-python is available as a PyPI package. You can install it using pip.
+
+
+pip install lmstudio
+For the source code and open source contribution, visit lmstudio-python on GitHub.
+
+Features
+Use LLMs to respond in chats or predict text completions
+Define functions as tools, and turn LLMs into autonomous agents that run completely locally
+Load, configure, and unload models from memory
+Generate embeddings for text, and more!
+Quick Example: Chat with a Llama Model
+
+
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+
+async with lms.AsyncClient() as client:
+    model = await client.llm.model("qwen/qwen3-4b-2507")
+    result = await model.respond("What is the meaning of life?")
+
+    print(result)
+
+
+
+lms get qwen/qwen3-4b-2507
+Read more about lms get in LM Studio's CLI here.
+
+Interactive Convenience, Deterministic Resource Management, or Structured Concurrency?
+As shown in the example above, there are three distinct approaches for working with the LM Studio Python SDK.
+
+The first is the interactive convenience API (listed as "Python (convenience API)" in examples), which focuses on the use of a default LM Studio client instance for convenient interactions at a synchronous Python prompt, or when using Jupyter notebooks.
+
+The second is a synchronous scoped resource API (listed as "Python (scoped resource API)" in examples), which uses context managers to ensure that allocated resources (such as network connections) are released deterministically, rather than potentially remaining open until the entire process is terminated.
+
+The last is an asynchronous structured concurrency API (listed as "Python (asynchronous API)" in examples), which is designed for use in asynchronous programs that follow the design principles of "structured concurrency" in order to ensure the background tasks handling the SDK's connections to the API server host are managed correctly. Asynchronous applications which do not adhere to those design principles will need to rely on threaded access to the synchronous scoped resource API rather than attempting to use the SDK's native asynchronous API. Python SDK version 1.5.0 is the first version to fully support the asynchronous API.
+
+Some examples are common between the interactive convenience API and the synchronous scoped resource API. These examples are listed as "Python (synchronous API)".
+
+Timeouts in the synchronous API
+Required Python SDK version: 1.5.0
+
+Starting in Python SDK version 1.5.0, the synchronous API defaults to timing out after 60 seconds with no activity when waiting for a response or streaming event notification from the API server.
+
+The number of seconds to wait for responses and event notifications can be adjusted using the lmstudio.set_sync_api_timeout() function. Setting the timeout to None disables the timeout entirely (restoring the behaviour of previous SDK versions).
+
+The current synchronous API timeout can be queried using the lmstudio.get_sync_api_timeout() function.
+
+Timeouts in the asynchronous API
+Required Python SDK version: 1.5.0
+
+As asynchronous coroutines support cancellation, there is no specific timeout support implemented in the asynchronous API. Instead, general purpose async timeout mechanisms, such as asyncio.wait_for() or anyio.move_on_after(), should be used.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Authentication
+Using API Tokens in LM Studio
+
+Copy Markdown
+Open
+Requires LM Studio 0.4.0 or newer.
+LM Studio supports API Tokens for authentication, providing a secure and convenient way to access the LM Studio API.
+
+By default, the LM Studio API runs without enforcing authentication. For production or shared environments, enable API Token authentication for secure access.
+
+Info
+
+To enable API Token authentication, create tokens and control granular permissions, check this guide for more details.
+
+Providing the API Token
+The API Token can be provided in two ways:
+
+Environment Variable (Recommended): Set the LM_API_TOKEN environment variable, and the SDK will automatically read it.
+Function Argument: Pass the token directly as the api_token parameter.
+Python (convenience API)
+Python (scoped resource API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+# Pass api_token to the AsyncClient constructor
+async with lms.AsyncClient(api_token="your-token-here") as client:
+    model = await client.llm.model()
+    result = await model.respond("What is the meaning of life?")
+    print(result)
+
+
+
+
+
+
+
+
+
+Project Setup
+Set up your lmstudio-python app or script.
+
+Copy Markdown
+Open
+lmstudio is a library published on PyPI that allows you to use lmstudio-python in your own projects. It is open source and developed on GitHub. You can find the source code here.
+
+Installing lmstudio-python
+As it is published to PyPI, lmstudio-python may be installed using pip or your preferred project dependency manager (pdm and uv are shown, but other Python project management tools offer similar dependency addition commands).
+
+pip
+pdm
+uv
+
+pip install lmstudio
+Customizing the server API host and TCP port
+All of the examples in the documentation assume that the server API is running locally on one of the default application ports (Note: in Python SDK versions prior to 1.5.0, the SDK also required that the optional HTTP REST server be enabled).
+
+The network location of the server API can be overridden by passing a "host:port" string when creating the client instance.
+
+Python (convenience API)
+Python (scoped resource API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+SERVER_API_HOST = "localhost:1234"
+# When using the asynchronous API, each client instance
+# can be configured to use a specific server API host
+async with lms.AsyncClient(SERVER_API_HOST) as client:
+    model = await client.llm.model()
+    for fragment in await model.respond_stream("What is the meaning of life?"):
+        print(fragment.content, end="", flush=True)
+    print() # Advance to a new line at the end of the response
+Checking a specified API server host is running
+Required Python SDK version: 1.5.0
+
+While the most common connection pattern is to let the SDK raise an exception if it can't connect to the specified API server host, the SDK also supports running the API check directly without creating an SDK client instance first:
+
+Python (synchronous API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+SERVER_API_HOST = "localhost:1234"
+if await lms.AsyncClient.is_valid_api_host(SERVER_API_HOST):
+    print(f"An LM Studio API server instance is available at {SERVER_API_HOST}")
+else:
+    print("No LM Studio API server instance found at {SERVER_API_HOST}")
+Determining the default local API server port
+Required Python SDK version: 1.5.0
+
+When no API server host is specified, the SDK queries a number of ports on the local loopback interface for a running API server instance. This scan is repeated for each new client instance created. Rather than letting the SDK perform this scan implicitly, the SDK also supports running the scan explicitly, and passing in the reported API server details when creating clients:
+
+Python (synchronous API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+api_host = await lms.AsyncClient.find_default_local_api_host()
+if api_host is not None:
+    print(f"An LM Studio API server instance is available at {api_host}")
+  else:
+    print("No LM Studio API server instance found on any of the default local ports")
+
+
+
+
+
+
+
+
+
+
+
+
+
+Using lmstudio-python in REPL
+You can use lmstudio-python in REPL (Read-Eval-Print Loop) to interact with LLMs, manage models, and more.
+
+Copy Markdown
+Open
+To simplify interactive use, lmstudio-python offers a convenience API which manages its resources via atexit hooks, allowing a default synchronous client session to be used across multiple interactive commands.
+
+This convenience API is shown in the examples throughout the documentation as the Python (convenience API) tab (alongside the Python (scoped resource API) examples, which use with statements to ensure deterministic cleanup of network communication resources).
+
+The convenience API allows the standard Python REPL, or more flexible alternatives like Juypter Notebooks, to be used to interact with AI models loaded into LM Studio. For example:
+
+Python REPL
+
+>>> import lmstudio as lms
+>>> loaded_models = lms.list_loaded_models()
+>>> for idx, model in enumerate(loaded_models):
+...     print(f"{idx:>3} {model}")
+...
+  0 LLM(identifier='qwen2.5-7b-instruct')
+>>> model = loaded_models[0]
+>>> chat = lms.Chat("You answer questions concisely")
+>>> chat = lms.Chat("You answer questions concisely")
+>>> chat.add_user_message("Tell me three fruits")
+UserMessage(content=[TextData(text='Tell me three fruits')])
+>>> print(model.respond(chat, on_message=chat.append))
+Banana, apple, orange.
+>>> chat.add_user_message("Tell me three more fruits")
+UserMessage(content=[TextData(text='Tell me three more fruits')])
+>>> print(model.respond(chat, on_message=chat.append))
+Mango, strawberry, avocado.
+>>> chat.add_user_message("How many fruits have you told me?")
+UserMessage(content=[TextData(text='How many fruits have you told me?')])
+>>> print(model.respond(chat, on_message=chat.append))
+You asked for three initial fruits and three more, so I've listed a total of six fruits.
+While not primarily intended for use this way, the SDK's asynchronous structured concurrency API is compatible with the asynchronous Python REPL that is launched by python -m asyncio. For example:
+
+Python REPL
+
+# Note: assumes use of the "python -m asyncio" asynchronous REPL (or equivalent)
+# Requires Python SDK version 1.5.0 or later
+>>> from contextlib import AsyncExitStack
+>>> import lmstudio as lms
+>>> resources = AsyncExitStack()
+>>> client = await resources.enter_async_context(lms.AsyncClient())
+>>> loaded_models = await client.llm.list_loaded()
+>>> for idx, model in enumerate(loaded_models):
+...     print(f"{idx:>3} {model}")
+...
+  0 AsyncLLM(identifier='qwen2.5-7b-instruct-1m')
+>>> model = loaded_models[0]
+>>> chat = lms.Chat("You answer questions concisely")
+>>> chat.add_user_message("Tell me three fruits")
+UserMessage(content=[TextData(text='Tell me three fruits')])
+>>> print(await model.respond(chat, on_message=chat.append))
+Apple, banana, and orange.
+>>> chat.add_user_message("Tell me three more fruits")
+UserMessage(content=[TextData(text='Tell me three more fruits')])
+>>> print(await model.respond(chat, on_message=chat.append))
+Mango, strawberry, and pineapple.
+>>> chat.add_user_message("How many fruits have you told me?")
+UserMessage(content=[TextData(text='How many fruits have you told me?')])
+>>> print(await model.respond(chat, on_message=chat.append))
+You asked for three fruits initially, then three more, so I've listed six fruits in total.
+
+
+
+
+
+
+
+
+
+
+
+Cancelling Predictions
+Stop an ongoing prediction in lmstudio-python
+
+Copy Markdown
+Open
+One benefit of using the streaming API is the ability to cancel the prediction request based on criteria that can't be represented using the stopStrings or maxPredictedTokens configuration settings.
+
+The following snippet illustrates cancelling the request in response to an application specification cancellation condition (such as polling an event set by another thread).
+
+Python (convenience API)
+Python (scoped resource API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+async with lms.AsyncClient() as client:
+    model = await client.llm.model()
+    prediction_stream = await model.respond_stream("What is the meaning of life?")
+    cancelled = False
+    async for fragment in prediction_stream:
+        if ...: # Cancellation condition will be app specific
+            cancelled = True
+            await prediction_stream.cancel()
+            # Note: it is recommended to let the iteration complete,
+            # as doing so allows the partial result to be recorded.
+            # Breaking the loop *is* permitted, but means the partial result
+            # and final prediction stats won't be available to the client
+    # The stream allows the prediction result to be retrieved after iteration
+    if not cancelled:
+        print(prediction_stream.result())
+
+
+
+
+
+
+
+
+
+
+
+Chat Completions
+APIs for a multi-turn chat conversations with an LLM
+
+Copy Markdown
+Open
+Use llm.respond(...) to generate completions for a chat conversation.
+
+Quick Example: Generate a Chat Response
+The following snippet shows how to obtain the AI's response to a quick chat prompt.
+
+Python (convenience API)
+Python (scoped resource API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+async with lms.AsyncClient() as client:
+    model = await client.llm.model()
+    print(await model.respond("What is the meaning of life?"))
+Streaming a Chat Response
+The following snippet shows how to stream the AI's response to a chat prompt, displaying text fragments as they are received (rather than waiting for the entire response to be generated before displaying anything).
+
+Python (convenience API)
+Python (scoped resource API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+async with lms.AsyncClient() as client:
+    model = await client.llm.model()
+    async for fragment in model.respond_stream("What is the meaning of life?"):
+        print(fragment.content, end="", flush=True)
+    print() # Advance to a new line at the end of the response
+Cancelling a Chat Response
+See the Cancelling a Prediction section for how to cancel a prediction in progress.
+
+Obtain a Model
+First, you need to get a model handle. This can be done using the top-level llm convenience API, or the model method in the llm namespace when using the scoped resource API. For example, here is how to use Qwen2.5 7B Instruct.
+
+Python (convenience API)
+Python (scoped resource API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+async with lms.AsyncClient() as client:
+    model = await client.llm.model("qwen2.5-7b-instruct")
+There are other ways to get a model handle. See Managing Models in Memory for more info.
+
+Manage Chat Context
+The input to the model is referred to as the "context". Conceptually, the model receives a multi-turn conversation as input, and it is asked to predict the assistant's response in that conversation.
+
+
+import lmstudio as lms
+# Create a chat with an initial system prompt.
+chat = lms.Chat("You are a resident AI philosopher.")
+# Build the chat context by adding messages of relevant types.
+chat.add_user_message("What is the meaning of life?")
+# ... continued in next example
+See Working with Chats for more information on managing chat context.
+
+Generate a response
+You can ask the LLM to predict the next response in the chat context using the respond() method.
+
+Non-streaming (synchronous API)
+Streaming (synchronous API)
+Non-streaming (asynchronous API)
+Streaming (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+# The `chat` object is created in the previous step.
+prediction_stream = await model.respond_stream(chat)
+async for fragment in prediction_stream:
+    print(fragment.content, end="", flush=True)
+print() # Advance to a new line at the end of the response
+Customize Inferencing Parameters
+You can pass in inferencing parameters via the config keyword parameter on .respond().
+
+Non-streaming (synchronous API)
+Streaming (synchronous API)
+Non-streaming (asynchronous API)
+Streaming (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+prediction_stream = await model.respond_stream(chat, config={
+    "temperature": 0.6,
+    "maxTokens": 50,
+})
+See Configuring the Model for more information on what can be configured.
+
+Print prediction stats
+You can also print prediction metadata, such as the model used for generation, number of generated tokens, time to first token, and stop reason.
+
+Non-streaming
+Streaming
+
+# After iterating through the prediction fragments,
+# the overall prediction result may be obtained from the stream
+result = prediction_stream.result()
+print("Model used:", result.model_info.display_name)
+print("Predicted tokens:", result.stats.predicted_tokens_count)
+print("Time to first token (seconds):", result.stats.time_to_first_token_sec)
+print("Stop reason:", result.stats.stop_reason)
+Both the non-streaming and streaming result access is consistent across the synchronous and asynchronous APIs, as prediction_stream.result() is a non-blocking API that raises an exception if no result is available (either because the prediction is still running, or because the prediction request failed). Prediction streams also offer a blocking (synchronous API) or awaitable (asynchronous API) prediction_stream.wait_for_result() method that internally handles iterating the stream to completion before returning the result.
+
+Example: Multi-turn Chat
+chatbot.py
+
+import lmstudio as lms
+model = lms.llm()
+chat = lms.Chat("You are a task focused AI assistant")
+while True:
+    try:
+        user_input = input("You (leave blank to exit): ")
+    except EOFError:
+        print()
+        break
+    if not user_input:
+        break
+    chat.add_user_message(user_input)
+    prediction_stream = model.respond_stream(
+        chat,
+        on_message=chat.append,
+    )
+    print("Bot: ", end="", flush=True)
+    for fragment in prediction_stream:
+        print(fragment.content, end="", flush=True)
+    print()
+Progress Callbacks
+Long prompts will often take a long time to first token, i.e. it takes the model a long time to process your prompt. If you want to get updates on the progress of this process, you can provide a float callback to respond that receives a float from 0.0-1.0 representing prompt processing progress.
+
+Python (convenience API)
+Python (scoped resource API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+async with lms.AsyncClient() as client:
+    llm = await client.llm.model()
+    response = await llm.respond(
+        "What is LM Studio?",
+        on_prompt_processing_progress = (lambda progress: print(f"{progress*100}% complete")),
+    )
+In addition to on_prompt_processing_progress, the other available progress callbacks are:
+
+on_first_token: called after prompt processing is complete and the first token is being emitted. Does not receive any arguments (use the streaming iteration API or on_prediction_fragment to process tokens as they are emitted).
+on_prediction_fragment: called for each prediction fragment received by the client. Receives the same prediction fragments as iterating over the stream iteration API.
+on_message: called with an assistant response message when the prediction is complete. Intended for appending received messages to a chat history instance.
+
+
+
+
+
+
+
+
+
+
+Text Completions
+Provide a string input for the model to complete
+
+Copy Markdown
+Open
+Use llm.complete(...) to generate text completions from a loaded language model. Text completions mean sending a non-formatted string to the model with the expectation that the model will complete the text.
+
+This is different from multi-turn chat conversations. For more information on chat completions, see Chat Completions.
+
+Quickstart
+Instantiate a Model
+First, you need to load a model to generate completions from. This can be done using the top-level llm convenience API, or the model method in the llm namespace when using the scoped resource API. For example, here is how to use Qwen2.5 7B Instruct.
+
+Python (convenience API)
+Python (scoped resource API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+async with lms.AsyncClient() as client:
+    model = await client.llm.model("qwen2.5-7b-instruct")
+Generate a Completion
+Once you have a loaded model, you can generate completions by passing a string to the complete method on the llm handle.
+
+Non-streaming (synchronous API)
+Streaming (synchronous API)
+Non-streaming (asynchronous API)
+Streaming (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+# The `model` object is created in the previous step.
+prediction_stream = await model.complete_stream("My name is", config={"maxTokens": 100})
+async for fragment in prediction_stream:
+    print(fragment.content, end="", flush=True)
+print() # Advance to a new line at the end of the response
+Print Prediction Stats
+You can also print prediction metadata, such as the model used for generation, number of generated tokens, time to first token, and stop reason.
+
+Non-streaming
+Streaming
+
+# After iterating through the prediction fragments,
+# the overall prediction result may be obtained from the stream
+result = prediction_stream.result()
+print("Model used:", result.model_info.display_name)
+print("Predicted tokens:", result.stats.predicted_tokens_count)
+print("Time to first token (seconds):", result.stats.time_to_first_token_sec)
+print("Stop reason:", result.stats.stop_reason)
+Both the non-streaming and streaming result access is consistent across the synchronous and asynchronous APIs, as prediction_stream.result() is a non-blocking API that raises an exception if no result is available (either because the prediction is still running, or because the prediction request failed). Prediction streams also offer a blocking (synchronous API) or awaitable (asynchronous API) prediction_stream.wait_for_result() method that internally handles iterating the stream to completion before returning the result.
+
+Example: Get an LLM to Simulate a Terminal
+Here's an example of how you might use the complete method to simulate a terminal.
+
+terminal-sim.py
+
+import lmstudio as lms
+model = lms.llm()
+console_history = []
+while True:
+    try:
+        user_command = input("$ ")
+    except EOFError:
+        print()
+        break
+    if user_command.strip() == "exit":
+        break
+    console_history.append(f"$ {user_command}")
+    history_prompt = "\n".join(console_history)
+    prediction_stream = model.complete_stream(
+        history_prompt,
+        config={ "stopStrings": ["$"] },
+    )
+    for fragment in prediction_stream:
+        print(fragment.content, end="", flush=True)
+    print()
+    console_history.append(prediction_stream.result().content)
+Customize Inferencing Parameters
+You can pass in inferencing parameters via the config keyword parameter on .complete().
+
+Non-streaming (synchronous API)
+Streaming (synchronous API)
+Non-streaming (asynchronous API)
+Streaming (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+prediction_stream = await model.complete_stream(initial_text, config={
+    "temperature": 0.6,
+    "maxTokens": 50,
+})
+See Configuring the Model for more information on what can be configured.
+
+Progress Callbacks
+Long prompts will often take a long time to first token, i.e. it takes the model a long time to process your prompt. If you want to get updates on the progress of this process, you can provide a float callback to complete that receives a float from 0.0-1.0 representing prompt processing progress.
+
+Python (convenience API)
+Python (scoped resource API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+async with lms.AsyncClient() as client:
+    llm = await client.llm.model()
+    completion = await llm.complete(
+        "My name is",
+        on_prompt_processing_progress = (lambda progress: print(f"{progress*100}% processed")),
+    )
+In addition to on_prompt_processing_progress, the other available progress callbacks are:
+
+on_first_token: called after prompt processing is complete and the first token is being emitted. Does not receive any arguments (use the streaming iteration API or on_prediction_fragment to process tokens as they are emitted).
+on_prediction_fragment: called for each prediction fragment received by the client. Receives the same prediction fragments as iterating over the stream iteration API.
+on_message: called with an assistant response message when the prediction is complete. Intended for appending received messages to a chat history instance.
+
+
+
+
+
+
+
+
+
+
+
+Image Input
+API for passing images as input to the model
+
+Copy Markdown
+Open
+Required Python SDK version: 1.1.0
+
+Some models, known as VLMs (Vision-Language Models), can accept images as input. You can pass images to the model using the .respond() method.
+
+Prerequisite: Get a VLM (Vision-Language Model)
+If you don't yet have a VLM, you can download a model like qwen2-vl-2b-instruct using the following command:
+
+
+lms get qwen2-vl-2b-instruct
+Instantiate the Model
+Connect to LM Studio and obtain a handle to the VLM (Vision-Language Model) you want to use.
+
+Python (convenience API)
+Python (scoped resource API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+async with lms.AsyncClient() as client:
+    model = await client.llm.model("qwen2-vl-2b-instruct")
+Prepare the Image
+Use the prepare_image() function or files namespace method to get a handle to the image that can subsequently be passed to the model.
+
+Python (convenience API)
+Python (scoped resource API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+async with lms.AsyncClient() as client:
+    image_path = "/path/to/image.jpg" # Replace with the path to your image
+    image_handle = await client.files.prepare_image(image_path)
+If you only have the raw data of the image, you can supply the raw data directly as a bytes object without having to write it to disk first. Due to this feature, binary filesystem paths are not supported (as they will be handled as malformed image data rather than as filesystem paths).
+
+Binary IO objects are also accepted as local file inputs.
+
+The LM Studio server supports JPEG, PNG, and WebP image formats.
+
+Pass the Image to the Model in .respond()
+Generate a prediction by passing the image to the model in the .respond() method.
+
+Python (convenience API)
+Python (scoped resource API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+async with lms.AsyncClient() as client:
+    image_path = "/path/to/image.jpg" # Replace with the path to your image
+    image_handle = client.files.prepare_image(image_path)
+    model = await client.llm.model("qwen2-vl-2b-instruct")
+    chat = lms.Chat()
+    chat.add_user_message("Describe this image please", images=[image_handle])
+    prediction = await model.respond(chat)
+
+
+
+
+
+
+
+
+
+
+
+
+Configuring the Model
+APIs for setting inference-time and load-time parameters for your model
+
+Copy Markdown
+Open
+You can customize both inference-time and load-time parameters for your model. Inference parameters can be set on a per-request basis, while load parameters are set when loading the model.
+
+Inference Parameters
+Set inference-time parameters such as temperature, maxTokens, topP and more.
+
+
+
+
+.respond()
+
+result = model.respond(chat, config={
+    "temperature": 0.6,
+    "maxTokens": 50,
+})
+
+
+
+
+.complete()
+
+result = model.complete(chat, config={
+    "temperature": 0.6,
+    "maxTokens": 50,
+    "stopStrings": ["\n\n"],
+  })
+
+
+
+
+See LLMPredictionConfigInput in the Typescript SDK documentation for all configurable fields.
+
+Note that while structured can be set to a JSON schema definition as an inference-time configuration parameter (Zod schemas are not supported in the Python SDK), the preferred approach is to instead set the dedicated response_format parameter, which allows you to more rigorously enforce the structure of the output using a JSON or class based schema definition.
+
+Load Parameters
+Set load-time parameters such as the context length, GPU offload ratio, and more.
+
+Set Load Parameters with .model()
+The .model() retrieves a handle to a model that has already been loaded, or loads a new one on demand (JIT loading).
+
+Note: if the model is already loaded, the given configuration will be ignored.
+
+Python (convenience API)
+Python (scoped resource API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+async with lms.AsyncClient() as client:
+    model = await client.llm.model(
+        "qwen2.5-7b-instruct",
+        config={
+            "contextLength": 8192,
+            "gpu": {
+              "ratio": 0.5,
+            }
+        }
+    )
+See LLMLoadModelConfig in the Typescript SDK documentation for all configurable fields.
+
+Set Load Parameters with .load_new_instance()
+The .load_new_instance() method creates a new model instance and loads it with the specified configuration.
+
+Python (convenience API)
+Python (scoped resource API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+async with lms.AsyncClient() as client:
+    model = await client.llm.load_new_instance(
+        "qwen2.5-7b-instruct",
+        config={
+            "contextLength": 8192,
+            "gpu": {
+              "ratio": 0.5,
+            }
+        }
+    )
+See LLMLoadModelConfig in the Typescript SDK documentation for all configurable fields.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Speculative Decoding
+API to use a draft model in speculative decoding in lmstudio-python
+
+Copy Markdown
+Open
+Required Python SDK version: 1.2.0
+
+Speculative decoding is a technique that can substantially increase the generation speed of large language models (LLMs) without reducing response quality. See Speculative Decoding for more info.
+
+To use speculative decoding in lmstudio-python, simply provide a draftModel parameter when performing the prediction. You do not need to load the draft model separately.
+
+Non-streaming
+Streaming
+
+import lmstudio as lms
+main_model_key = "qwen2.5-7b-instruct"
+draft_model_key = "qwen2.5-0.5b-instruct"
+model = lms.llm(main_model_key)
+prediction_stream = model.respond_stream(
+    "What are the prime numbers between 0 and 100?",
+    config={
+        "draftModel": draft_model_key,
+    }
+)
+for fragment in prediction_stream:
+    print(fragment.content, end="", flush=True)
+print() # Advance to a new line at the end of the response
+stats = prediction_stream.result().stats
+print(f"Accepted {stats.accepted_draft_tokens_count}/{stats.predicted_tokens_count} tokens")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Structured Response
+Enforce a structured response from the model using Pydantic models or JSON Schema
+
+Copy Markdown
+Open
+You can enforce a particular response format from an LLM by providing a JSON schema to the .respond() method. This guarantees that the model's output conforms to the schema you provide.
+
+The JSON schema can either be provided directly, or by providing an object that implements the lmstudio.ModelSchema protocol, such as pydantic.BaseModel or lmstudio.BaseModel.
+
+The lmstudio.ModelSchema protocol is defined as follows:
+
+
+@runtime_checkable
+class ModelSchema(Protocol):
+    """Protocol for classes that provide a JSON schema for their model."""
+    @classmethod
+    def model_json_schema(cls) -> DictSchema:
+        """Return a JSON schema dict describing this model."""
+        ...
+When a schema is provided, the prediction result's parsed field will contain a string-keyed dictionary that conforms to the given schema (for unstructured results, this field is a string field containing the same value as content).
+
+Enforce Using a Class Based Schema Definition
+If you wish the model to generate JSON that satisfies a given schema, it is recommended to provide a class based schema definition using a library such as pydantic or msgspec.
+
+Pydantic models natively implement the lmstudio.ModelSchema protocol, while lmstudio.BaseModel is a msgspec.Struct subclass that implements .model_json_schema() appropriately.
+
+Define a Class Based Schema
+pydantic.BaseModel
+lmstudio.BaseModel
+
+from lmstudio import BaseModel
+# A class based schema for a book
+class BookSchema(BaseModel):
+    title: str
+    author: str
+    year: int
+Generate a Structured Response
+Non-streaming
+Streaming
+
+prediction_stream = model.respond_stream("Tell me about The Hobbit", response_format=BookSchema)
+# Optionally stream the response
+# for fragment in prediction:
+#   print(fragment.content, end="", flush=True)
+# print()
+# Note that even for structured responses, the *fragment* contents are still only text
+# Get the final structured result
+result = prediction_stream.result()
+book = result.parsed
+print(book)
+#           ^
+# Note that `book` is correctly typed as { title: string, author: string, year: number }
+Enforce Using a JSON Schema
+You can also enforce a structured response using a JSON schema.
+
+Define a JSON Schema
+
+# A JSON schema for a book
+schema = {
+  "type": "object",
+  "properties": {
+    "title": { "type": "string" },
+    "author": { "type": "string" },
+    "year": { "type": "integer" },
+  },
+  "required": ["title", "author", "year"],
+}
+Generate a Structured Response
+Non-streaming
+Streaming
+
+prediction_stream = model.respond_stream("Tell me about The Hobbit", response_format=schema)
+# Stream the response
+for fragment in prediction:
+    print(fragment.content, end="", flush=True)
+print()
+# Note that even for structured responses, the *fragment* contents are still only text
+# Get the final structured result
+result = prediction_stream.result()
+book = result.parsed
+print(book)
+#     ^
+# Note that `book` is correctly typed as { title: string, author: string, year: number }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Working with Chats
+APIs for representing a chat conversation with an LLM
+
+Copy Markdown
+Open
+SDK methods such as llm.respond(), llm.applyPromptTemplate(), or llm.act() take in a chat parameter as an input. There are a few ways to represent a chat when using the SDK.
+
+Option 1: Input a Single String
+If your chat only has one single user message, you can use a single string to represent the chat. Here is an example with the .respond method.
+
+
+prediction = llm.respond("What is the meaning of life?")
+Option 2: Using the Chat Helper Class
+For more complex tasks, it is recommended to use the Chat helper class. It provides various commonly used methods to manage the chat. Here is an example with the Chat class, where the initial system prompt is supplied when initializing the chat instance, and then the initial user message is added via the corresponding method call.
+
+
+chat = Chat("You are a resident AI philosopher.")
+chat.add_user_message("What is the meaning of life?")
+prediction = llm.respond(chat)
+You can also quickly construct a Chat object using the Chat.from_history method.
+
+
+
+Chat history data
+
+chat = Chat.from_history({"messages": [
+  { "role": "system", "content": "You are a resident AI philosopher." },
+  { "role": "user", "content": "What is the meaning of life?" },
+]})
+Option 3: Providing Chat History Data Directly
+As the APIs that accept chat histories use Chat.from_history internally, they also accept the chat history data format as a regular dictionary:
+
+
+
+Single string
+
+# This constructs a chat with a single user message
+chat = Chat.from_history("What is the meaning of life?")
+
+
+
+
+prediction = llm.respond({"messages": [
+  { "role": "system", "content": "You are a resident AI philosopher." },
+  { "role": "user", "content": "What is the meaning of life?" },
+]})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+The .act() call
+How to use the .act() call to turn LLMs into autonomous agents that can perform tasks on your local machine.
+
+Copy Markdown
+Open
+Automatic tool calling
+We introduce the concept of execution "rounds" to describe the combined process of running a tool, providing its output to the LLM, and then waiting for the LLM to decide what to do next.
+
+Execution Round
+
+
+ • run a tool ->
+ ↑   • provide the result to the LLM ->
+ │       • wait for the LLM to generate a response
+ │
+ └────────────────────────────────────────┘ └➔ (return)
+A model might choose to run tools multiple times before returning a final result. For example, if the LLM is writing code, it might choose to compile or run the program, fix errors, and then run it again, rinse and repeat until it gets the desired result.
+
+With this in mind, we say that the .act() API is an automatic "multi-round" tool calling API.
+
+Quick Example
+
+import lmstudio as lms
+def multiply(a: float, b: float) -> float:
+    """Given two numbers a and b. Returns the product of them."""
+    return a * b
+model = lms.llm("qwen2.5-7b-instruct")
+model.act(
+  "What is the result of 12345 multiplied by 54321?",
+  [multiply],
+  on_message=print,
+)
+What does it mean for an LLM to "use a tool"?
+LLMs are largely text-in, text-out programs. So, you may ask "how can an LLM use a tool?". The answer is that some LLMs are trained to ask the human to call the tool for them, and expect the tool output to to be provided back in some format.
+
+Imagine you're giving computer support to someone over the phone. You might say things like "run this command for me ... OK what did it output? ... OK now click there and tell me what it says ...". In this case you're the LLM! And you're "calling tools" vicariously through the person on the other side of the line.
+
+Running multiple tool calls in parallel
+By default, version 1.4.0 and later of the Python SDK will only run a single tool call request at a time, even if the model requests multiple tool calls in a single response message. This ensures the requests will be processed correctly even if the tool implementations do not support multiple concurrent calls.
+
+When the tool implementations are known to be thread-safe, and are both slow and frequent enough to be worth running in parallel, the max_parallel_tool_calls option specifies the maximum number of tool call requests that will be processed in parallel from a single model response. This value defaults to 1 (waiting for each tool call to complete before starting the next one). Setting this value to None will automatically scale the maximum number of parallel tool calls to a multiple of the number of CPU cores available to the process.
+
+Important: Model Selection
+The model selected for tool use will greatly impact performance.
+
+Some general guidance when selecting a model:
+
+Not all models are capable of intelligent tool use
+Bigger is better (i.e., a 7B parameter model will generally perform better than a 3B parameter model)
+We've observed Qwen2.5-7B-Instruct to perform well in a wide variety of cases
+This guidance may change
+Example: Multiple Tools
+The following code demonstrates how to provide multiple tools in a single .act() call.
+
+
+import math
+import lmstudio as lms
+def add(a: int, b: int) -> int:
+    """Given two numbers a and b, returns the sum of them."""
+    return a + b
+def is_prime(n: int) -> bool:
+    """Given a number n, returns True if n is a prime number."""
+    if n < 2:
+        return False
+    sqrt = int(math.sqrt(n))
+    for i in range(2, sqrt):
+        if n % i == 0:
+            return False
+    return True
+model = lms.llm("qwen2.5-7b-instruct")
+model.act(
+  "Is the result of 12345 + 45668 a prime? Think step by step.",
+  [add, is_prime],
+  on_message=print,
+)
+Example: Chat Loop with Create File Tool
+The following code creates a conversation loop with an LLM agent that can create files.
+
+
+import readline # Enables input line editing
+from pathlib import Path
+import lmstudio as lms
+def create_file(name: str, content: str):
+    """Create a file with the given name and content."""
+    dest_path = Path(name)
+    if dest_path.exists():
+        return "Error: File already exists."
+    try:
+        dest_path.write_text(content, encoding="utf-8")
+    except Exception as exc:
+        return "Error: {exc!r}"
+    return "File created."
+def print_fragment(fragment, round_index=0):
+    # .act() supplies the round index as the second parameter
+    # Setting a default value means the callback is also
+    # compatible with .complete() and .respond().
+    print(fragment.content, end="", flush=True)
+model = lms.llm()
+chat = lms.Chat("You are a task focused AI assistant")
+while True:
+    try:
+        user_input = input("You (leave blank to exit): ")
+    except EOFError:
+        print()
+        break
+    if not user_input:
+        break
+    chat.add_user_message(user_input)
+    print("Bot: ", end="", flush=True)
+    model.act(
+        chat,
+        [create_file],
+        on_message=chat.append,
+        on_prediction_fragment=print_fragment,
+    )
+    print()
+Progress Callbacks
+Complex interactions with a tool using agent may take some time to process.
+
+The regular progress callbacks for any prediction request are available, but the expected capabilities differ from those for single round predictions.
+
+on_prompt_processing_progress: called during prompt processing for each prediction round. Receives the progress ratio (as a float) and the round index as positional arguments.
+on_first_token: called after prompt processing is complete for each prediction round. Receives the round index as its sole argument.
+on_prediction_fragment: called for each prediction fragment received by the client. Receives the prediction fragment and the round index as positional arguments.
+on_message: called with an assistant response message when each prediction round is complete, and with tool result messages as each tool call request is completed. Intended for appending received messages to a chat history instance, and hence does not receive the round index as an argument.
+The following additional callbacks are available to monitor the prediction rounds:
+
+on_round_start: called before submitting the prediction request for each round. Receives the round index as its sole argument.
+on_prediction_completed: called after the prediction for the round has been completed, but before any requested tool calls have been initiated. Receives the round's prediction result as its sole argument. A round prediction result is a regular prediction result with an additional round_index attribute.
+on_round_end: called after any tool call requests for the round have been resolved.
+Finally, applications may request notifications when agents emit invalid tool requests:
+
+handle_invalid_tool_request: called when a tool request was unable to be processed. Receives the exception that is about to be reported, as well as the original tool request that resulted in the problem. When no tool request is given, this is purely a notification of an unrecoverable error before the agent interaction raises the given exception (allowing the application to raise its own exception instead). When a tool request is given, it indicates that rather than being raised locally, the text description of the exception is going to be passed back to the agent as the result of that failed tool request. In these cases, the callback may either return None to indicate that the error description should be sent to the agent, raise the given exception (or a different exception) locally, or return a text string that should be sent to the agent instead of the error description.
+For additional details on defining tools, and an example of overriding the invalid tool request handling to raise all exceptions locally instead of passing them to back the agent, refer to Tool Definition.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Tool Definition
+Define tools to be called by the LLM, and pass them to the model in the act() call.
+
+Copy Markdown
+Open
+You can define tools as regular Python functions and pass them to the model in the act() call. Alternatively, tools can be defined with lmstudio.ToolFunctionDef in order to control the name and description passed to the language model.
+
+Anatomy of a Tool
+Follow one of the following examples to define functions as tools (the first approach is typically going to be the most convenient):
+
+
+
+Python function
+
+# Type hinted functions with clear names and docstrings
+# may be used directly as tool definitions
+def add(a: int, b: int) -> int:
+    """Given two numbers a and b, returns the sum of them."""
+    # The SDK ensures arguments are coerced to their specified types
+    return a + b
+# Pass `add` directly to `act()` as a tool definition
+
+
+
+ToolFunctionDef.from_callable
+
+from lmstudio import ToolFunctionDef
+def cryptic_name(a: int, b: int) -> int:
+    return a + b
+# Type hinted functions with cryptic names and missing or poor docstrings
+# can be turned into clear tool definitions with `from_callable`
+tool_def = ToolFunctionDef.from_callable(
+  cryptic_name,
+  name="add",
+  description="Given two numbers a and b, returns the sum of them."
+)
+# Pass `tool_def` to `act()` as a tool definition
+
+
+
+
+ToolFunctionDef
+
+from lmstudio import ToolFunctionDef
+def cryptic_name(a, b):
+    return a + b
+# Functions without type hints can be used without wrapping them
+# at runtime by defining a tool function directly.
+tool_def = ToolFunctionDef(
+  name="add",
+  description="Given two numbers a and b, returns the sum of them.",
+  parameters={
+    "a": int,
+    "b": int,
+  },
+  implementation=cryptic_name,
+)
+# Pass `tool_def` to `act()` as a tool definition
+
+
+
+
+Important: The tool name, description, and the parameter definitions are all passed to the model!
+
+This means that your wording will affect the quality of the generation. Make sure to always provide a clear description of the tool so the model knows how to use it.
+
+Tools with External Effects (like Computer Use or API Calls)
+Tools can also have external effects, such as creating files or calling programs and even APIs. By implementing tools with external effects, you can essentially turn your LLMs into autonomous agents that can perform tasks on your local machine.
+
+Example: create_file_tool
+Tool Definition
+create_file_tool.py
+
+from pathlib import Path
+def create_file(name: str, content: str):
+    """Create a file with the given name and content."""
+    dest_path = Path(name)
+    if dest_path.exists():
+        return "Error: File already exists."
+    try:
+        dest_path.write_text(content, encoding="utf-8")
+    except Exception as exc:
+        return "Error: {exc!r}"
+    return "File created."
+Example code using the create_file tool:
+example.py
+
+import lmstudio as lms
+from create_file_tool import create_file
+model = lms.llm("qwen2.5-7b-instruct")
+model.act(
+  "Please create a file named output.txt with your understanding of the meaning of life.",
+  [create_file],
+)
+Handling tool calling errors
+By default, version 1.3.0 and later of the Python SDK will automatically convert exceptions raised by tool calls to text and report them back to the language model. In many cases, when notified of an error in this way, a language model is able to either adjust its request to avoid the failure, or else accept the failure as a valid response to its request (consider a prompt like Attempt to divide 1 by 0 using the provided tool. Explain the result., where the expected response is an explanation of the ZeroDivisionError exception the Python interpreter raises when instructed to divide by zero).
+
+This error handling behaviour can be overridden using the handle_invalid_tool_request callback. For example, the following code reverts the error handling back to raising exceptions locally in the client:
+
+example.py
+
+import lmstudio as lms
+def divide(numerator: float, denominator: float) -> float:
+    """Divide the given numerator by the given denominator. Return the result."""
+    return numerator / denominator
+model = lms.llm("qwen2.5-7b-instruct")
+chat = Chat()
+chat.add_user_message(
+    "Attempt to divide 1 by 0 using the tool. Explain the result."
+)
+def _raise_exc_in_client(
+    exc: LMStudioPredictionError, request: ToolCallRequest | None
+) -> None:
+    raise exc
+act_result = llm.act(
+    chat,
+    [divide],
+    handle_invalid_tool_request=_raise_exc_in_client,
+)
+When a tool request is passed in, the callback results are processed as follows:
+
+None: the original exception text is passed to the LLM unmodified
+a string: the returned string is passed to the LLM instead of the original exception text
+raising an exception (whether the passed in exception or a new exception): the raised exception is propagated locally in the client, terminating the prediction process
+If no tool request is passed in, the callback invocation is a notification only, and the exception cannot be converted to text for passing pack to the LLM (although it can still be replaced with a different exception). These cases indicate failures in the expected communication with the server API that mean the prediction process cannot reasonably continue, so if the callback doesn't raise an exception, the calling code will raise the original exception directly.
+
+
+
+
+
+Embedding
+Generate text embeddings from input text
+
+Copy Markdown
+Open
+Generate embeddings for input text. Embeddings are vector representations of text that capture semantic meaning. Embeddings are a building block for RAG (Retrieval-Augmented Generation) and other similarity-based tasks.
+
+Prerequisite: Get an Embedding Model
+If you don't yet have an embedding model, you can download a model like nomic-ai/nomic-embed-text-v1.5 using the following command:
+
+
+lms get nomic-ai/nomic-embed-text-v1.5
+Create Embeddings
+To convert a string to a vector representation, pass it to the embed method on the corresponding embedding model handle.
+
+example.py
+
+import lmstudio as lms
+model = lms.embedding_model("nomic-embed-text-v1.5")
+embedding = model.embed("Hello, world!")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Tokenization
+Tokenize text using a model's tokenizer
+
+Copy Markdown
+Open
+Models use a tokenizer to internally convert text into "tokens" they can deal with more easily. LM Studio exposes this tokenizer for utility.
+
+Tokenize
+You can tokenize a string with a loaded LLM or embedding model using the SDK. In the below examples, the LLM reference can be replaced with an embedding model reference without requiring any other changes.
+
+
+import lmstudio as lms
+model = lms.llm()
+tokens = model.tokenize("Hello, world!")
+print(tokens) # Array of token IDs.
+Count tokens
+If you only care about the number of tokens, simply check the length of the resulting array.
+
+
+token_count = len(model.tokenize("Hello, world!"))
+print("Token count:", token_count)
+Example: count context
+You can determine if a given conversation fits into a model's context by doing the following:
+
+Convert the conversation to a string using the prompt template.
+Count the number of tokens in the string.
+Compare the token count to the model's context length.
+
+import lmstudio as lms
+def does_chat_fit_in_context(model: lms.LLM, chat: lms.Chat) -> bool:
+    # Convert the conversation to a string using the prompt template.
+    formatted = model.apply_prompt_template(chat)
+    # Count the number of tokens in the string.
+    token_count = len(model.tokenize(formatted))
+    # Get the current loaded context length of the model
+    context_length = model.get_context_length()
+    return token_count < context_length
+model = lms.llm()
+chat = lms.Chat.from_history({
+    "messages": [
+        { "role": "user", "content": "What is the meaning of life." },
+        { "role": "assistant", "content": "The meaning of life is..." },
+        # ... More messages
+    ]
+})
+print("Fits in context:", does_chat_fit_in_context(model, chat))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+List Downloaded Models
+APIs to list the available models in a given local environment
+
+Copy Markdown
+Open
+You can iterate through locally available models using the downloaded model listing methods.
+
+The listing results offer .model() and .load_new_instance() methods, which allow the downloaded model reference to be converted in the full SDK handle for a loaded model.
+
+Available Models on the LM Studio Server
+Python (convenience API)
+Python (scoped resource API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+async with lms.AsyncClient() as client:
+    downloaded = await client.list_downloaded_models()
+    llm_only = await client.llm.list_downloaded()
+    embedding_only = await client.embedding.list_downloaded()
+for model in downloaded:
+    print(model)
+This will give you results equivalent to using lms ls in the CLI.
+
+Example output:
+
+DownloadedLlm(model_key='qwen2.5-7b-instruct-1m', display_name='Qwen2.5 7B Instruct 1M', architecture='qwen2', vision=False)
+DownloadedEmbeddingModel(model_key='text-embedding-nomic-embed-text-v1.5', display_name='Nomic Embed Text v1.5
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+List Loaded Models
+Query which models are currently loaded
+
+Copy Markdown
+Open
+You can iterate through models loaded into memory using the functions and methods shown below.
+
+The results are full SDK model handles, allowing access to all model functionality.
+
+List Models Currently Loaded in Memory
+This will give you results equivalent to using lms ps in the CLI.
+
+Python (convenience API)
+Python (scoped resource API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+async with lms.AsyncClient() as client:
+    all_loaded_models = await client.list_loaded_models()
+    llm_only = await client.llm.list_loaded()
+    embedding_only = await client.embedding.list_loaded()
+    print(all_loaded_models)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Manage Models in Memory
+APIs to load, access, and unload models from memory
+
+Copy Markdown
+Open
+AI models are huge. It can take a while to load them into memory. LM Studio's SDK allows you to precisely control this process.
+
+Model namespaces:
+
+LLMs are accessed through the client.llm namespace
+Embedding models are accessed through the client.embedding namespace
+lmstudio.llm is equivalent to client.llm.model on the default client
+lmstudio.embedding_model is equivalent to client.embedding.model on the default client
+Most commonly:
+
+Use .model() to get any currently loaded model
+Use .model("model-key") to use a specific model
+Advanced (manual model management):
+
+Use .load_new_instance("model-key") to load a new instance of a model
+Use .unload("model-key") or model_handle.unload() to unload a model from memory
+Get the Current Model with .model()
+If you already have a model loaded in LM Studio (either via the GUI or lms load), you can use it by calling .model() without any arguments.
+
+Python (convenience API)
+Python (scoped resource API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+async with lms.AsyncClient() as client:
+    model = await client.llm.model()
+Get a Specific Model with .model("model-key")
+If you want to use a specific model, you can provide the model key as an argument to .model().
+
+Get if Loaded, or Load if not
+Calling .model("model-key") will load the model if it's not already loaded, or return the existing instance if it is.
+
+Python (convenience API)
+Python (scoped resource API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+async with lms.AsyncClient() as client:
+    model = await client.llm.model("qwen/qwen3-4b-2507")
+Load a New Instance of a Model with .load_new_instance()
+Use load_new_instance() to load a new instance of a model, even if one already exists. This allows you to have multiple instances of the same or different models loaded at the same time.
+
+Python (convenience API)
+Python (scoped resource API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+async with lms.AsyncClient() as client:
+    model = await client.llm.load_new_instance("qwen/qwen3-4b-2507")
+    another_model = await client.llm.load_new_instance("qwen/qwen3-4b-2507", "my-second-model")
+Note about Instance Identifiers
+If you provide an instance identifier that already exists, the server will throw an error. So if you don't really care, it's safer to not provide an identifier, in which case the server will generate one for you. You can always check in the server tab in LM Studio, too!
+
+Unload a Model from Memory with .unload()
+Once you no longer need a model, you can unload it by simply calling unload() on its handle.
+
+Python (convenience API)
+Python (scoped resource API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+async with lms.AsyncClient() as client:
+    model = await client.llm.model()
+    await model.unload()
+Set Custom Load Config Parameters
+You can also specify the same load-time configuration options when loading a model, such as Context Length and GPU offload.
+
+See load-time configuration for more.
+
+Set an Auto Unload Timer (TTL)
+You can specify a time to live for a model you load, which is the idle time (in seconds) after the last request until the model unloads. See Idle TTL for more on this.
+
+Pro Tip
+
+If you specify a TTL to model(), it will only apply if model() loads a new instance, and will not retroactively change the TTL of an existing instance.
+
+Python (convenience API)
+Python (scoped resource API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+async with lms.AsyncClient() as client:
+    model = await client.llm.model("qwen/qwen3-4b-2507", ttl=3600)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Get Context Length
+API to get the maximum context length of a model.
+
+Copy Markdown
+Open
+LLMs and embedding models, due to their fundamental architecture, have a property called context length, and more specifically a maximum context length. Loosely speaking, this is how many tokens the models can "keep in memory" when generating text or embeddings. Exceeding this limit will result in the model behaving erratically.
+
+Use the get_context_length() function on the model object
+It's useful to be able to check the context length of a model, especially as an extra check before providing potentially long input to the model.
+
+example.py
+
+context_length = model.get_context_length()
+The model in the above code snippet is an instance of a loaded model you get from the llm.model method. See Manage Models in Memory for more information.
+
+Example: Check if the input will fit in the model's context window
+You can determine if a given conversation fits into a model's context by doing the following:
+
+Convert the conversation to a string using the prompt template.
+Count the number of tokens in the string.
+Compare the token count to the model's context length.
+
+import lmstudio as lms
+def does_chat_fit_in_context(model: lms.LLM, chat: lms.Chat) -> bool:
+    # Convert the conversation to a string using the prompt template.
+    formatted = model.apply_prompt_template(chat)
+    # Count the number of tokens in the string.
+    token_count = len(model.tokenize(formatted))
+    # Get the current loaded context length of the model
+    context_length = model.get_context_length()
+    return token_count < context_length
+model = lms.llm()
+chat = lms.Chat.from_history({
+    "messages": [
+        { "role": "user", "content": "What is the meaning of life." },
+        { "role": "assistant", "content": "The meaning of life is..." },
+        # ... More messages
+    ]
+})
+print("Fits in context:", does_chat_fit_in_context(model, chat))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Get Load Config
+Get the load configuration of the model
+
+Copy Markdown
+Open
+Required Python SDK version: 1.2.0
+
+LM Studio allows you to configure certain parameters when loading a model through the server UI or through the API.
+
+You can retrieve the config with which a given model was loaded using the SDK.
+
+In the below examples, the LLM reference can be replaced with an embedding model reference without requiring any other changes.
+
+Pro Tip
+
+Context length is a special case that has its own method.
+
+Python (convenience API)
+Python (scoped resource API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+async with lms.Client() as client:
+    model = await client.llm.model()
+    print(await model.get_load_config())
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Get Model Info
+Get information about the model
+
+Copy Markdown
+Open
+You can access general information and metadata about a model itself from a loaded instance of that model.
+
+In the below examples, the LLM reference can be replaced with an embedding model reference without requiring any other changes.
+
+Python (convenience API)
+Python (scoped resource API)
+Python (asynchronous API)
+
+# Note: assumes use of an async function or the "python -m asyncio" asynchronous REPL
+# Requires Python SDK version 1.5.0 or later
+import lmstudio as lms
+async with lms.AsyncClient() as client:
+    model = await client.llm.model()
+    print(await model.get_info())
+Example output
+
+LlmInstanceInfo.from_dict({
+  "architecture": "qwen2",
+  "contextLength": 4096,
+  "displayName": "Qwen2.5 7B Instruct 1M",
+  "format": "gguf",
+  "identifier": "qwen2.5-7b-instruct",
+  "instanceReference": "lpFZPBQjhSZPrFevGyY6Leq8",
+  "maxContextLength": 1010000,
+  "modelKey": "qwen2.5-7b-instruct-1m",
+  "paramsString": "7B",
+  "path": "lmstudio-community/Qwen2.5-7B-Instruct-1M-GGUF/Qwen2.5-7B-Instruct-1M-Q4_K_M.gguf",
+  "sizeBytes": 4683073888,
+  "trainedForToolUse": true,
+  "type": "llm",
+  "vision": false
+})
+
