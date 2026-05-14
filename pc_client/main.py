@@ -386,7 +386,7 @@ async def hw_monitor(ws: Any):
                 except Exception:  # pylint: disable=broad-exception-caught
                     pass
 
-        await asyncio.sleep(5)
+        await asyncio.sleep(300)
 
 
 # ==========================================
