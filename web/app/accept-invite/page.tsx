@@ -25,7 +25,10 @@ function AcceptForm() {
 
   return (
     <form className="card-form" onSubmit={onSubmit}>
-      <div className="brand">AI Workspace</div>
+      <div className="brand-lockup brand-lockup--lg">
+        <img src="/logo.png" alt="AI Workspace" width={56} height={56} />
+        <div className="brand">AI Workspace</div>
+      </div>
       <h1>پذیرش دعوت</h1>
       <input
         placeholder="توکن دعوت"

@@ -1,4 +1,10 @@
-# AI Workspace
+<p align="center">
+  <img src="docs/assets/logo.png" alt="AI Workspace logo" height="160" />
+</p>
+
+<h1 align="center">AI Workspace</h1>
+
+<p align="center">
 
 [![CI](https://github.com/Ali-Rashidi-80/lmstudio-Remote-server-client/actions/workflows/ci.yml/badge.svg)](https://github.com/Ali-Rashidi-80/lmstudio-Remote-server-client/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/version-20.0.0-blue.svg)](VERSION)
@@ -6,7 +12,9 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](backend/requirements.txt)
 [![Next.js 15](https://img.shields.io/badge/Next.js-15-black.svg)](web/package.json)
 
-**English** · [فارسی](readme.fa.md)
+</p>
+
+<p align="center"><strong>English</strong> · <a href="readme.fa.md">فارسی</a></p>
 
 **AI Workspace** is a multi-user remote AI product: a **FastAPI Bridge** + **Next.js (RTL)** web app + **PostgreSQL/pgvector** + **Redis** + a home/office **PC Worker** that talks to **LM Studio** — so your GPU stays local while users chat and search private knowledge securely over the network.
 
@@ -129,8 +137,11 @@ More detail: [`docs/architecture.md`](docs/architecture.md) · [فارسی](docs
 
 ```text
 .
+├── assets/logo.png          # Brand mark (root copy)
+├── docs/assets/logo.png     # README / docs logo + logo-prompt.md
 ├── backend/                 # FastAPI Bridge, Alembic, pytest, ARQ worker
 ├── web/                     # Next.js product UI (login, chat, knowledge, admin)
+│   └── public/logo.png      # Favicon / UI brand asset
 ├── pc_client/               # PC Worker (LM Studio relay)
 ├── scripts/                 # start-bridge, rag-worker, install-deps, qa, backup
 ├── docs/                    # English docs (default)
@@ -366,6 +377,8 @@ CI (GitHub Actions): backend lint/types/tests against Postgres+pgvector + Redis,
 | Troubleshooting | [`docs/troubleshooting.md`](docs/troubleshooting.md) | [`docs/fa/troubleshooting.md`](docs/fa/troubleshooting.md) |
 | Chabokan deploy | [`docs/deployment-chabokan.md`](docs/deployment-chabokan.md) | [`docs/fa/deployment-chabokan.md`](docs/fa/deployment-chabokan.md) |
 | Iran mirrors | [`docs/mirrors-iran.md`](docs/mirrors-iran.md) | [`docs/fa/mirrors-iran.md`](docs/fa/mirrors-iran.md) |
+| Brand logo | [`docs/assets/logo.png`](docs/assets/logo.png) | same |
+| Logo prompt | [`docs/assets/logo-prompt.md`](docs/assets/logo-prompt.md) | bilingual in-file |
 | Contributing | [`CONTRIBUTING.md`](CONTRIBUTING.md) | [`CONTRIBUTING.fa.md`](CONTRIBUTING.fa.md) |
 | Security policy | [`SECURITY.md`](SECURITY.md) | [`SECURITY.fa.md`](SECURITY.fa.md) |
 | Changelog | [`CHANGELOG.md`](CHANGELOG.md) | — |

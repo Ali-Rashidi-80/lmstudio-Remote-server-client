@@ -146,7 +146,10 @@ export default function ChatPage() {
   return (
     <div className="shell">
       <aside className="sidebar">
-        <div className="brand">AI Workspace</div>
+        <div className="brand-lockup">
+          <img src="/logo.png" alt="AI Workspace" width={40} height={40} />
+          <div className="brand">AI Workspace</div>
+        </div>
         <div className="muted">Worker: {status}</div>
         <button className="btn primary" onClick={newChat}>
           گفتگوی جدید

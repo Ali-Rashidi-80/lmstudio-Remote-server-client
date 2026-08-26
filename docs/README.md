@@ -4,6 +4,13 @@
 
 Official docs for **AI Workspace 20.0.0**. The repository default language is **English**; Persian mirrors live under [`fa/`](fa/).
 
+## Brand
+
+| Asset | Path |
+|-------|------|
+| Logo (3D mark) | [assets/logo.png](assets/logo.png) |
+| Logo generation prompt | [assets/logo-prompt.md](assets/logo-prompt.md) |
+
 ## Guides
 
 | Topic | English | فارسی |

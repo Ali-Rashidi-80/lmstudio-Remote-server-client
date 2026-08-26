@@ -71,6 +71,29 @@ pre {
   letter-spacing: 0.02em;
 }
 
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.brand-lockup img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
+}
+
+.brand-lockup.brand-lockup--lg img {
+  width: 56px;
+  height: 56px;
+}
+
+.brand-lockup .brand {
+  margin: 0;
+}
+
 .muted {
   color: var(--muted);
   font-size: 0.9rem;

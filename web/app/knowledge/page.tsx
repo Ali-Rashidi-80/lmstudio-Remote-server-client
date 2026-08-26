@@ -48,7 +48,10 @@ export default function KnowledgePage() {
     <main className="panel" style={{ maxWidth: 900, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <div>
-          <div className="brand">پایگاه دانش</div>
+          <div className="brand-lockup">
+            <img src="/logo.png" alt="AI Workspace" width={40} height={40} />
+            <div className="brand">پایگاه دانش</div>
+          </div>
           <p className="muted">PDF / TXT / MD / DOCX — امبدینگ از LM Studio EmbeddingGemma</p>
         </div>
         <Link className="btn" href="/chat">

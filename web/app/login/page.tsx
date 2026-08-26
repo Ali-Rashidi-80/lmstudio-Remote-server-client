@@ -31,7 +31,10 @@ export default function LoginPage() {
   return (
     <main className="auth-wrap">
       <form className="card-form" onSubmit={onSubmit}>
-        <div className="brand">AI Workspace</div>
+        <div className="brand-lockup brand-lockup--lg">
+          <img src="/logo.png" alt="AI Workspace" width={56} height={56} />
+          <div className="brand">AI Workspace</div>
+        </div>
         <h1>ورود</h1>
         <p className="muted">دسترسی فقط با دعوت یا حساب ساخته‌شده توسط ادمین.</p>
         <input

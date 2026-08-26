@@ -64,7 +64,10 @@ export default function AdminPage() {
     <main className="panel" style={{ maxWidth: 1100, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem" }}>
         <div>
-          <div className="brand">داشبورد ادمین</div>
+          <div className="brand-lockup">
+            <img src="/logo.png" alt="AI Workspace" width={40} height={40} />
+            <div className="brand">داشبورد ادمین</div>
+          </div>
           <p className="muted">AI Workspace v20.0.0</p>
         </div>
         <Link className="btn" href="/chat">

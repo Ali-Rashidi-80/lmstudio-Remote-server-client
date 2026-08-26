@@ -1,4 +1,10 @@
-# AI Workspace
+<p align="center">
+  <img src="docs/assets/logo.png" alt="لوگوی AI Workspace" height="160" />
+</p>
+
+<h1 align="center">AI Workspace</h1>
+
+<p align="center">
 
 [![CI](https://github.com/Ali-Rashidi-80/lmstudio-Remote-server-client/actions/workflows/ci.yml/badge.svg)](https://github.com/Ali-Rashidi-80/lmstudio-Remote-server-client/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/version-20.0.0-blue.svg)](VERSION)
@@ -6,7 +12,9 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](backend/requirements.txt)
 [![Next.js 15](https://img.shields.io/badge/Next.js-15-black.svg)](web/package.json)
 
-[English](readme.md) · **فارسی**
+</p>
+
+<p align="center"><a href="readme.md">English</a> · <strong>فارسی</strong></p>
 
 **AI Workspace** یک محصول هوش مصنوعی ریموت چندکاربره است: **پل FastAPI** + وب‌اپ **Next.js (RTL)** + **PostgreSQL/pgvector** + **Redis** + **PC Worker** خانگی/اداری که به **LM Studio** وصل می‌شود — GPU روی ماشین محلی می‌ماند و کاربران از راه دور با چت و دانش خصوصی امن کار می‌کنند.
 
@@ -129,15 +137,17 @@ flowchart TB
 
 ```text
 .
-├── backend/          # Bridge، Alembic، pytest، ARQ
-├── web/              # UI محصول Next.js
-├── pc_client/        # PC Worker
-├── scripts/          # راه‌اندازی، نصب، QA، بکاپ
-├── docs/             # مستندات انگلیسی (پیش‌فرض)
-│   └── fa/           # مستندات فارسی
-├── archive/legacy/   # آزمایش‌های قدیمی (مسیر محصول نیست)
-├── readme.md         # انگلیسی (پیش‌فرض)
-└── readme.fa.md      # فارسی
+├── assets/logo.png       # نشان برند
+├── docs/assets/logo.png  # لوگو README + logo-prompt.md
+├── backend/              # Bridge، Alembic، pytest، ARQ
+├── web/                  # UI محصول Next.js (+ public/logo.png)
+├── pc_client/            # PC Worker
+├── scripts/              # راه‌اندازی، نصب، QA، بکاپ
+├── docs/                 # مستندات انگلیسی (پیش‌فرض)
+│   └── fa/               # مستندات فارسی
+├── archive/legacy/       # آزمایش‌های قدیمی (مسیر محصول نیست)
+├── readme.md             # انگلیسی (پیش‌فرض)
+└── readme.fa.md          # فارسی
 ```
 
 `main.py` / `templates/` ریشه و `pc_client/gui_client.py` مسیر محصول نیستند؛ Next.js + `backend/` را ترجیح دهید.
