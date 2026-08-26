@@ -172,7 +172,8 @@ async def retrieve(
     except Exception:
         # Older pgvector builds may not expose ef_search; retrieval still works.
         pass
-    sql = text("""
+    sql = text(
+        """
         SELECT c.id, c.doc_id, c.content, c.embed_model_id, c.embed_dim,
                d.title AS doc_title,
                1 - (c.embedding <=> CAST(:qvec AS vector)) AS score
@@ -187,7 +188,8 @@ async def retrieve(
           )
         ORDER BY c.embedding <=> CAST(:qvec AS vector)
         LIMIT :limit
-        """)
+        """
+    )
     qvec_literal = "[" + ",".join(str(float(x)) for x in qvec) + "]"
     result = await db.execute(
         sql,

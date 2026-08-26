@@ -51,5 +51,9 @@ Thumbs.db
 # Local chat dumps
 **/chat_history.json
 
+# Secret scan artifacts
+gitleaks-report.json
+*.sarif
+
 # Cursor (local)
 .cursor/projects/

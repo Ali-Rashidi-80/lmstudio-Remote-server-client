@@ -1,0 +1,14 @@
+# Gitleaks configuration for AI Workspace
+# https://github.com/gitleaks/gitleaks
+
+title = "ai-workspace"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Non-secret paths and placeholders"
+paths = [
+  '''(^|/)archive/legacy/''',
+  '''(^|/)\.gitleaks\.toml$''',
+]
