@@ -1,0 +1,55 @@
+# Secrets
+.env
+.env.*
+!.env.example
+!**/.env.example
+pc_client/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# Node / Next.js
+node_modules/
+web/node_modules/
+web/.next/
+web/out/
+web/dist/
+npm-debug.log*
+yarn-error.log*
+
+# Databases & local data
+*.db
+*.sqlite3
+data/
+uploads/
+storage/
+*.log
+logs/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Local chat dumps
+**/chat_history.json
+
+# Cursor (local)
+.cursor/projects/

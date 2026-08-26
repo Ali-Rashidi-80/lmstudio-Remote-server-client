@@ -430,7 +430,8 @@
     
     let ws = null, isS = false, reconnects = 0, watchdog = null;
     let cryptoKey = null;
-    const rawKey = "{{ env_key }}";
+    // Legacy UI deprecated — product UI is Next.js. No server key injection.
+    const rawKey = "";
 
     if (!clientId) {
         clientId = "web_" + Math.random().toString(36).slice(2, 10);

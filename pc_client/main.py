@@ -45,9 +45,10 @@ urllib.request.getproxies = _empty_proxies
 current_dir = Path(__file__).parent
 env_path = current_dir / ".env"
 if env_path.exists():
-    load_dotenv(dotenv_path=env_path)
+    # override=True so pc_client/.env wins over stale shell env vars
+    load_dotenv(dotenv_path=env_path, override=True)
 else:
-    load_dotenv()
+    load_dotenv(override=True)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -153,7 +154,8 @@ llm_semaphore: Any = None
 # ==========================================
 def get_lm_host() -> str:
     """Get the LM Studio host URL safely."""
-    raw_host = str(_CACHED_CFG["lmstudio"]["host"]).strip().rstrip("/")
+    env_host = os.getenv("LMSTUDIO_HOST", "").strip()
+    raw_host = env_host or str(_CACHED_CFG["lmstudio"]["host"]).strip().rstrip("/")
     if not raw_host.startswith("http://") and \
        not raw_host.startswith("https://"):
         return f"http://{raw_host}"
@@ -167,23 +169,26 @@ async def send_packet(
     content: str,
     extra_data: dict = None
 ):
-    """Send an encrypted packet through the WebSocket."""
+    """Send a v1 protocol packet through the WebSocket to the Bridge."""
     if ws is None:
         return
 
-    payload_dict = {"type": msg_type, "content": content}
+    payload_dict = {"content": content}
     if extra_data:
         payload_dict.update(extra_data)
+
+    packet = {
+        "v": 1,
+        "type": msg_type,
+        "client_id": client_id,
+        "payload": payload_dict,
+        "content": content,
+    }
 
     try:
         async with asyncio.timeout(5.0):
             async with ws_send_lock:
-                payload_str = json.dumps(payload_dict)
-                encrypted_payload = encrypt_message(payload_str)
-                await ws.send(json.dumps({
-                    "client_id": client_id,
-                    "payload": encrypted_payload
-                }))
+                await ws.send(json.dumps(packet, ensure_ascii=False))
     except asyncio.TimeoutError:
         logger.error("Timeout sending packet to %s", client_id)
     except websockets.exceptions.ConnectionClosed:
@@ -445,6 +450,50 @@ async def handle_unload_models(ws: Any, client_id: str):
     except Exception:  # pylint: disable=broad-exception-caught
         await send_packet(
             ws, client_id, "error", "ارتباط با LM Studio برقرار نشد."
+        )
+
+
+async def handle_embeddings(ws: Any, client_id: str, payload: dict):
+    """Proxy embeddings to local LM Studio OpenAI-compatible API."""
+    host = get_lm_host().rstrip("/")
+    model = payload.get("model") or _CACHED_CFG.get("lmstudio", {}).get(
+        "embedding_model_key", "text-embedding-embeddinggemma-300m"
+    )
+    inputs = payload.get("input") or payload.get("texts") or []
+    if isinstance(inputs, str):
+        inputs = [inputs]
+    try:
+        resp = await global_http_client.post(
+            f"{host}/v1/embeddings",
+            json={"model": model, "input": inputs},
+            timeout=120.0,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        await send_packet(
+            ws,
+            client_id,
+            "embeddings_result",
+            "ok",
+            extra_data={
+                "data": data.get("data", []),
+                "model": model,
+                "request_id": payload.get("request_id"),
+            },
+        )
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        logger.error("Embeddings failed: %s", exc)
+        # Always return embeddings_result so Bridge waiters do not hang until timeout
+        await send_packet(
+            ws,
+            client_id,
+            "embeddings_result",
+            "error",
+            extra_data={
+                "error": f"Embeddings failed: {exc}",
+                "data": [],
+                "request_id": payload.get("request_id"),
+            },
         )
 
 
@@ -796,12 +845,21 @@ async def pc_worker():
     else:
         uri = f"{raw_url}/ws/pc"
 
-    logger.info("Normalized Bridge Endpoint: %s", uri)
+    worker_token = os.getenv("WORKER_TOKEN", "").strip()
+    if not worker_token:
+        raise RuntimeError("WORKER_TOKEN is required in pc_client/.env")
+    sep = "&" if "?" in uri else "?"
+    uri = f"{uri}{sep}token={worker_token}"
 
+    logger.info("Normalized Bridge Endpoint: %s", uri.split("token=")[0] + "token=***")
+
+    tls_verify = os.getenv("TLS_VERIFY", "true").strip().lower() in {"1", "true", "yes"}
     if uri.startswith("wss://"):
         ssl_ctx = ssl.create_default_context()
-        ssl_ctx.check_hostname = False
-        ssl_ctx.verify_mode = ssl.CERT_NONE
+        if not tls_verify:
+            ssl_ctx.check_hostname = False
+            ssl_ctx.verify_mode = ssl.CERT_NONE
+            logger.warning("TLS_VERIFY=false — certificate verification disabled")
     else:
         ssl_ctx = None
 
@@ -845,7 +903,7 @@ async def pc_worker():
                                     async with asyncio.timeout(2.0):
                                         async with ws_send_lock:
                                             await ws.send(
-                                                json.dumps({"type": "pong"})
+                                                json.dumps({"v": 1, "type": "pong"})
                                             )
                                 except Exception:  # pylint: disable=broad-exception-caught
                                     pass
@@ -854,9 +912,76 @@ async def pc_worker():
                             if msg.get("type") == "pong":
                                 continue
 
+                            # Protocol v1: plaintext JSON from Bridge
+                            if msg.get("v") == 1 and msg.get("client_id"):
+                                msg_type = msg.get("type")
+                                cid = msg["client_id"]
+                                dec = msg.get("payload") or {}
+                                if isinstance(dec, str):
+                                    try:
+                                        dec = json.loads(dec)
+                                    except json.JSONDecodeError:
+                                        dec = {"content": dec}
+                                if msg_type == "chat" and isinstance(dec, dict):
+                                    rag_ctx = dec.get("rag_context")
+                                    if rag_ctx:
+                                        user_text = dec.get("content") or dec.get("message") or ""
+                                        dec["content"] = (
+                                            "Use the following retrieved context when helpful.\n"
+                                            f"CONTEXT:\n{rag_ctx}\n\nUSER:\n{user_text}"
+                                        )
+
+                                if msg_type == "sys_cancel":
+                                    if cid in active_tasks:
+                                        active_tasks[cid].cancel()
+                                    active_chats.pop(cid, None)
+                                elif msg_type == "clear_history":
+                                    if cid in active_tasks:
+                                        active_tasks[cid].cancel()
+                                    active_chats.pop(cid, None)
+                                    await send_packet(
+                                        ws, cid, "queue",
+                                        "✅ تاریخچه سرور پردازشی پاک شد."
+                                    )
+                                elif msg_type == "get_models":
+                                    asyncio.create_task(handle_get_models(ws, cid))
+                                elif msg_type == "unload_models":
+                                    asyncio.create_task(handle_unload_models(ws, cid))
+                                elif msg_type == "embeddings":
+                                    asyncio.create_task(
+                                        handle_embeddings(ws, cid, dec)
+                                    )
+                                elif msg_type == "chat":
+                                    if cid in active_tasks:
+                                        active_tasks[cid].cancel()
+                                        await asyncio.sleep(0.05)
+                                    user_text = (
+                                        dec.get("content")
+                                        or dec.get("text")
+                                        or dec.get("message")
+                                        or ""
+                                    )
+                                    active_tasks[cid] = asyncio.create_task(
+                                        run_ai(
+                                            ws=ws,
+                                            client_id=cid,
+                                            user_text=user_text,
+                                            requested_model=dec.get("model", ""),
+                                            image_b64=dec.get("image"),
+                                            use_tools=bool(dec.get("use_tools", False)),
+                                            req_history=dec.get("history"),
+                                        )
+                                    )
+                                continue
+
                             if msg.get("client_id") and msg.get("payload"):
-                                decrypted_raw = decrypt_message(msg["payload"])
-                                if "خطای امنیتی" in decrypted_raw:
+                                # Legacy encrypted payload path
+                                try:
+                                    decrypted_raw = decrypt_message(msg["payload"])
+                                except RuntimeError:
+                                    logger.error("ENCRYPTION_KEY missing for legacy payload")
+                                    continue
+                                if "خطای امنیتی" in decrypted_raw or "Security error" in decrypted_raw:
                                     logger.error("Security mismatch.")
                                     continue
 
