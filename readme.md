@@ -1,29 +1,22 @@
+# AI Workspace
+
 <p align="center">
-  <img src="docs/assets/logo.png" alt="AI Workspace logo" height="160" />
+  <img src="docs/assets/logo.png" alt="AI Workspace" width="160" height="160" />
 </p>
 
-<h1 align="center">AI Workspace</h1>
-
 <p align="center">
+<strong>English</strong> · <a href="readme.fa.md">فارسی</a>
+</p>
 
 [![CI](https://github.com/Ali-Rashidi-80/lmstudio-Remote-server-client/actions/workflows/ci.yml/badge.svg)](https://github.com/Ali-Rashidi-80/lmstudio-Remote-server-client/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-20.0.0-blue.svg)](VERSION)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-20.0.0-informational.svg)](VERSION)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](backend/requirements.txt)
 [![Next.js 15](https://img.shields.io/badge/Next.js-15-black.svg)](web/package.json)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-</p>
+> **Multi-user remote AI workspace** — FastAPI Bridge + Next.js (RTL) + PostgreSQL/pgvector + Redis + home/office **PC Worker** for **LM Studio** — GPU stays local; users chat and search private knowledge securely over the network.
 
-<p align="center"><strong>English</strong> · <a href="readme.fa.md">فارسی</a></p>
-
-**AI Workspace** is a multi-user remote AI product: a **FastAPI Bridge** + **Next.js (RTL)** web app + **PostgreSQL/pgvector** + **Redis** + a home/office **PC Worker** that talks to **LM Studio** — so your GPU stays local while users chat and search private knowledge securely over the network.
-
-| | |
-|---|---|
-| **Version** | [`20.0.0`](VERSION) — see [`CHANGELOG.md`](CHANGELOG.md) |
-| **License** | [MIT](LICENSE) |
-| **Docs** | [`docs/`](docs/) · [فارسی](docs/fa/) |
-| **Default language** | English (this file). Persian mirrors live next to English sources. |
+**Quick links:** [Quick Start](#quick-start) · [Architecture](#architecture) · [Docs](docs/README.md) · [فارسی](readme.fa.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [License](#license)
 
 ---
 

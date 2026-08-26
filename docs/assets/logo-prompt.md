@@ -2,7 +2,7 @@
 
 **English** · [فارسی](#لوگو)
 
-Mark: [`logo.png`](logo.png) · README height **160** · web `/logo.png`
+Mark: [`logo.png`](logo.png) · README display **`width="160" height="160"`** · web `/logo.png`
 
 ---
 

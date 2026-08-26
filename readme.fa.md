@@ -1,29 +1,22 @@
+# AI Workspace
+
 <p align="center">
-  <img src="docs/assets/logo.png" alt="لوگوی AI Workspace" height="160" />
+  <img src="docs/assets/logo.png" alt="AI Workspace" width="160" height="160" />
 </p>
 
-<h1 align="center">AI Workspace</h1>
-
 <p align="center">
+<a href="readme.md">English</a> · <strong>فارسی</strong>
+</p>
 
 [![CI](https://github.com/Ali-Rashidi-80/lmstudio-Remote-server-client/actions/workflows/ci.yml/badge.svg)](https://github.com/Ali-Rashidi-80/lmstudio-Remote-server-client/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-20.0.0-blue.svg)](VERSION)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-20.0.0-informational.svg)](VERSION)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](backend/requirements.txt)
 [![Next.js 15](https://img.shields.io/badge/Next.js-15-black.svg)](web/package.json)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-</p>
+> **فضای کاری هوش مصنوعی ریموت چندکاربره** — پل FastAPI + Next.js (RTL) + PostgreSQL/pgvector + Redis + **PC Worker** خانگی/اداری برای **LM Studio** — GPU محلی می‌ماند؛ کاربران با چت و دانش خصوصی امن از راه دور کار می‌کنند.
 
-<p align="center"><a href="readme.md">English</a> · <strong>فارسی</strong></p>
-
-**AI Workspace** یک محصول هوش مصنوعی ریموت چندکاربره است: **پل FastAPI** + وب‌اپ **Next.js (RTL)** + **PostgreSQL/pgvector** + **Redis** + **PC Worker** خانگی/اداری که به **LM Studio** وصل می‌شود — GPU روی ماشین محلی می‌ماند و کاربران از راه دور با چت و دانش خصوصی امن کار می‌کنند.
-
-| | |
-|---|---|
-| **نسخه** | [`20.0.0`](VERSION) — [`CHANGELOG.md`](CHANGELOG.md) |
-| **مجوز** | [MIT](LICENSE) |
-| **مستندات** | [`docs/`](docs/) (انگلیسی پیش‌فرض) · [`docs/fa/`](docs/fa/) |
-| **زبان پیش‌فرض مخزن** | انگلیسی (`readme.md`). این فایل آینهٔ فارسی است. |
+**پیوندهای سریع:** [شروع سریع](#شروع-سریع) · [معماری](#معماری) · [مستندات](docs/fa/README.md) · [English](readme.md) · [مشارکت](CONTRIBUTING.fa.md) · [امنیت](SECURITY.fa.md) · [مجوز](#مجوز)
 
 ---
 
