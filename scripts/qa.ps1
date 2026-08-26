@@ -14,7 +14,7 @@ function Invoke-Checked {
 }
 
 Invoke-Checked "pip install QA deps" {
-    python -m pip install -q ruff black isort flake8 mypy types-redis pytest pytest-asyncio
+    python -m pip install -q ruff black isort flake8 mypy types-redis types-aiofiles pytest pytest-asyncio
 }
 Invoke-Checked "ruff" { python -m ruff check app tests }
 # black may write emoji to stderr; do not treat that as failure
