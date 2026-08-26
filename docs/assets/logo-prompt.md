@@ -91,7 +91,7 @@ Mood: sovereign, invite-only, remote-capable, trustworthy workspace doorway — 
 
 ## Usage
 
-- README: `height="160"` with wordmark **AI Workspace** under/ beside  
+- README: `width="160" height="160"` with wordmark **AI Workspace** in the H1 above the mark (rashid-agent header pattern)  
 - Web: `/logo.png` favicon + brand lockup with text label  
 - Do not regenerate from planet/orbit references (collapse risk)
 
