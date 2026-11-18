@@ -31,6 +31,39 @@ check_untyped_defs = true
 pretty = true
 exclude = ["alembic/"]
 
+[tool.pylint.main]
+py-version = "3.11"
+ignore = ["alembic", ".venv"]
+extension-pkg-allow-list = ["pydantic"]
+
+[tool.pylint.format]
+max-line-length = 100
+
+[tool.pylint.basic]
+good-names = ["SessionLocal", "_redis", "admin", "user", "pending", "id", "db", "ws", "ok", "ip", "v", "q"]
+
+[tool.pylint."messages control"]
+disable = [
+  "missing-module-docstring",
+  "missing-class-docstring",
+  "missing-function-docstring",
+  "too-few-public-methods",
+  "too-many-arguments",
+  "too-many-positional-arguments",
+  "too-many-locals",
+  "too-many-branches",
+  "too-many-statements",
+  "too-many-instance-attributes",
+  "too-many-return-statements",
+  "import-outside-toplevel",
+  "global-statement",
+  "broad-exception-caught",
+  "duplicate-code",
+  "not-callable",
+  "unnecessary-pass",
+  "line-too-long",
+]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"

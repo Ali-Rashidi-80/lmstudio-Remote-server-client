@@ -32,11 +32,11 @@ jobs:
     env:
       DATABASE_URL: postgresql+asyncpg://aiws:testpass@localhost:5432/aiworkspace
       REDIS_URL: redis://localhost:6379/0
-      JWT_SECRET: ci-test-secret-not-for-production
-      WORKER_TOKEN: ci-worker-token
+      JWT_SECRET: ci-test-secret-not-for-production-32bytes
+      WORKER_TOKEN: ci-worker-token-min-16
       ADMIN_BOOTSTRAP_USERNAME: admin
       ADMIN_BOOTSTRAP_PASSWORD: adminpass12
-      CORS_ORIGINS: http://localhost:3000
+      CORS_ORIGINS: http://localhost:3000,http://localhost:3010
       COOKIE_SECURE: "false"
     steps:
       - uses: actions/checkout@v4
@@ -45,20 +45,39 @@ jobs:
           python-version: "3.12"
       - name: Install
         run: |
-          python -m pip install -r backend/requirements.txt
+          python -m pip install -r backend/requirements.txt pylint
       - name: Ruff
         run: |
-          cd backend && ruff check app tests
-      - name: Black / isort / flake8 / mypy
+          cd backend && ruff check app tests ../pc_client/main.py ../pc_client/cipher_utils.py ../cipher_utils.py
+      - name: Black / isort / flake8 / mypy / pylint / compileall
         run: |
           cd backend
           black --check app tests
           isort --check-only app tests
           flake8 app tests --max-line-length=100 --extend-ignore=E501,E203,E402
           mypy app --ignore-missing-imports
+          pylint app
+          python -m compileall -q app tests ../pc_client
       - name: Pytest
         run: |
           cd backend && PYTHONPATH=. pytest -q
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install
+        run: |
+          cd web && npm ci --registry=https://registry.npmjs.org/
+      - name: TypeScript / ESLint / Build
+        run: |
+          cd web
+          npx tsc --noEmit
+          npm run lint
+          npm run build
 
   gitleaks:
     runs-on: ubuntu-latest

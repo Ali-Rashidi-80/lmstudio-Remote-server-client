@@ -6,9 +6,15 @@ from pydantic import BaseModel, Field
 
 
 class ChatCreate(BaseModel):
-    title: str = "New chat"
-    model: str | None = None
+    title: str = Field(default="New chat", min_length=1, max_length=255)
+    model: str | None = Field(default=None, max_length=255)
     use_rag: bool = False
+
+
+class ChatUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    model: str | None = Field(default=None, max_length=255)
+    use_rag: bool | None = None
 
 
 class ChatOut(BaseModel):
@@ -29,7 +35,7 @@ class MessageOut(BaseModel):
 
 
 class LocalImportSession(BaseModel):
-    title: str = "Imported"
+    title: str = Field(default="Imported", max_length=255)
     history: list[dict] = Field(default_factory=list)
 
 

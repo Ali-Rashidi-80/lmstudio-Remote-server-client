@@ -28,6 +28,7 @@ web/node_modules/
 web/.next/
 web/out/
 web/dist/
+*.tsbuildinfo
 npm-debug.log*
 yarn-error.log*
 
@@ -55,5 +56,9 @@ Thumbs.db
 gitleaks-report.json
 *.sarif
 
-# Cursor (local)
-.cursor/projects/
+# Local IDE, backups & test artifacts
+.cursor/
+backups/
+.eslintcache
+web/playwright-report/
+web/test-results/

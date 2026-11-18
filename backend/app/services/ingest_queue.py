@@ -10,6 +10,7 @@ from arq import create_pool
 from arq.connections import RedisSettings
 
 from app.core.config import get_settings
+from app.services.ingest_runner import run_ingest_job
 
 logger = logging.getLogger("ingest_queue")
 
@@ -24,9 +25,7 @@ async def enqueue_ingest(doc_id: uuid.UUID, job_id: uuid.UUID) -> str:
     settings = get_settings()
     mode = (getattr(settings, "RAG_INGEST_MODE", None) or "arq").strip().lower()
     if mode == "inline":
-        from app.api.routes.knowledge import _ingest_doc
-
-        asyncio.create_task(_ingest_doc(doc_id, job_id))
+        asyncio.create_task(run_ingest_job(doc_id, job_id))
         return "inline"
 
     try:
@@ -39,7 +38,5 @@ async def enqueue_ingest(doc_id: uuid.UUID, job_id: uuid.UUID) -> str:
         return "arq"
     except Exception:
         logger.exception("ARQ enqueue failed; falling back to inline ingest")
-        from app.api.routes.knowledge import _ingest_doc
-
-        asyncio.create_task(_ingest_doc(doc_id, job_id))
+        asyncio.create_task(run_ingest_job(doc_id, job_id))
         return "inline"

@@ -1,20 +1,23 @@
-"""Cryptography utilities for Bridge ↔ Worker relay (optional payload encryption)."""
+"""Cryptography utilities for Bridge ↔ Worker relay (AES-256-GCM authenticated encryption)."""
 
 from __future__ import annotations
 
 import base64
+import hashlib
 import logging
 import os
 
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
-from Crypto.Util.Padding import pad, unpad
 from dotenv import load_dotenv
 
 load_dotenv()
 logger = logging.getLogger("Crypto")
 
 MAX_PAYLOAD_BYTES = 1024 * 1024 * 2
+NONCE_LEN = 12
+TAG_LEN = 16
+V2_PREFIX = "v2:"
 
 
 def _load_key() -> bytes:
@@ -24,7 +27,7 @@ def _load_key() -> bytes:
             "ENCRYPTION_KEY is missing or too short. "
             "Set a strong key in .env (min 16 chars). No insecure default."
         )
-    return raw_key.encode("utf-8")[:32].ljust(32, b"\0")
+    return hashlib.sha256(raw_key.strip().encode("utf-8")).digest()
 
 
 try:
@@ -34,41 +37,44 @@ except RuntimeError:
 
 
 def encrypt_message(text: str) -> str:
-    """AES-CBC with a random IV per message."""
+    """AES-256-GCM with a random 96-bit nonce and 128-bit auth tag."""
     if not text:
         return ""
     if not KEY:
         raise RuntimeError("ENCRYPTION_KEY is not configured")
-    try:
-        iv = get_random_bytes(16)
-        cipher = AES.new(KEY, AES.MODE_CBC, iv)
-        padded_data = pad(text.encode("utf-8"), AES.block_size)
-        encrypted_bytes = cipher.encrypt(padded_data)
-        return base64.b64encode(iv + encrypted_bytes).decode("utf-8")
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.error("Encryption error: %s", e)
-        return ""
+    nonce = get_random_bytes(NONCE_LEN)
+    cipher = AES.new(KEY, AES.MODE_GCM, nonce=nonce)
+    ciphertext, tag = cipher.encrypt_and_digest(text.encode("utf-8"))
+    blob = base64.b64encode(nonce + tag + ciphertext).decode("ascii")
+    return f"{V2_PREFIX}{blob}"
 
 
-def decrypt_message(encrypted_b64: str) -> str:
-    """Decrypt AES-CBC payload with size checks."""
-    if not encrypted_b64:
+def decrypt_message(encrypted_payload: str) -> str:
+    """Decrypt and authenticate AES-256-GCM payload with size checks."""
+    if not encrypted_payload:
         return ""
     if not KEY:
         raise RuntimeError("ENCRYPTION_KEY is not configured")
     try:
-        data = base64.b64decode(encrypted_b64)
+        raw_b64 = (
+            encrypted_payload[len(V2_PREFIX) :]
+            if encrypted_payload.startswith(V2_PREFIX)
+            else encrypted_payload
+        )
+        data = base64.b64decode(raw_b64, validate=True)
         if len(data) > MAX_PAYLOAD_BYTES:
             raise ValueError("Payload too large")
-        if len(data) < 16:
+        if len(data) < NONCE_LEN + TAG_LEN:
             raise ValueError("Invalid data length")
 
-        iv = data[:16]
-        ciphertext = data[16:]
-        cipher = AES.new(KEY, AES.MODE_CBC, iv)
-        decrypted = unpad(cipher.decrypt(ciphertext), AES.block_size)
+        nonce = data[:NONCE_LEN]
+        tag = data[NONCE_LEN : NONCE_LEN + TAG_LEN]
+        ciphertext = data[NONCE_LEN + TAG_LEN :]
+        cipher = AES.new(KEY, AES.MODE_GCM, nonce=nonce)
+        decrypted = cipher.decrypt_and_verify(ciphertext, tag)
         return decrypted.decode("utf-8")
-    except Exception:  # pylint: disable=broad-exception-caught
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        logger.warning("Payload decryption/authentication failed: %s", type(exc).__name__)
         return (
             '{"type": "error", "content": '
             '"Security error: key mismatch or corrupted payload."}'

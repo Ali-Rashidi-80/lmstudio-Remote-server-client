@@ -1,24 +1,29 @@
-"""RAG chunking, embedding via Worker / LM Studio, and retrieval."""
+"""RAG chunking, embedding via Worker / Bridge RPC / LM Studio, and retrieval."""
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import re
 import uuid
 from pathlib import Path
+from typing import Any
 
 import httpx
-from sqlalchemy import func, select, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.models.entities import AppSetting, KnowledgeDoc, RagChunk
 from app.services.vectors import l2_normalize
 
+logger = logging.getLogger("rag")
+
 CHUNK_CHARS = 1800
 OVERLAP = 200
-# Approximate context budget for injected RAG snippets (chars)
 RAG_CONTEXT_CHARS = 6000
 HNSW_EF_SEARCH = 40
+RETRYABLE_STATUS = {429, 500, 502, 503, 504}
 
 
 def sanitize_filename(name: str) -> str:
@@ -44,17 +49,22 @@ def extract_text(path: Path, content_type: str) -> str:
     raise ValueError(f"Unsupported file type: {suffix}")
 
 
-def chunk_text(text: str) -> list[str]:
-    text = re.sub(r"\n{3,}", "\n\n", text).strip()
-    if not text:
+def chunk_text(text_content: str) -> list[str]:
+    settings = get_settings()
+    chunk_chars = max(int(settings.RAG_CHUNK_CHARS or CHUNK_CHARS), 200)
+    overlap = max(0, min(int(settings.RAG_CHUNK_OVERLAP or OVERLAP), chunk_chars // 2))
+    cleaned = re.sub(r"\n{3,}", "\n\n", text_content).strip()
+    if not cleaned:
         return []
     chunks: list[str] = []
     i = 0
-    while i < len(text):
-        chunk = text[i : i + CHUNK_CHARS]
-        chunks.append(chunk.strip())
-        i += max(CHUNK_CHARS - OVERLAP, 1)
-    return [c for c in chunks if c]
+    step = max(chunk_chars - overlap, 1)
+    while i < len(cleaned):
+        chunk = cleaned[i : i + chunk_chars].strip()
+        if chunk:
+            chunks.append(chunk)
+        i += step
+    return chunks
 
 
 async def resolve_embed_model(db: AsyncSession) -> str:
@@ -76,35 +86,83 @@ async def resolve_chat_model(db: AsyncSession) -> str:
     return get_settings().DEFAULT_CHAT_MODEL
 
 
+async def _post_with_retries(
+    url: str,
+    json_body: dict[str, Any],
+    headers: dict[str, str] | None = None,
+    timeout: float = 120.0,
+    attempts: int = 3,
+) -> dict[str, Any]:
+    last_exc: Exception | None = None
+    async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
+        for attempt in range(attempts):
+            try:
+                resp = await client.post(url, json=json_body, headers=headers)
+                if resp.status_code in RETRYABLE_STATUS and attempt < attempts - 1:
+                    await asyncio.sleep(0.5 * (2**attempt))
+                    continue
+                resp.raise_for_status()
+                return resp.json()
+            except httpx.TransportError as exc:
+                last_exc = exc
+                if attempt < attempts - 1:
+                    await asyncio.sleep(0.5 * (2**attempt))
+                    continue
+                raise
+    if last_exc:
+        raise last_exc
+    raise RuntimeError("Embedding HTTP call failed unexpectedly")
+
+
 async def embed_texts(
     texts: list[str],
     lmstudio_base: str | None = None,
     model: str | None = None,
 ) -> list[list[float]]:
-    """Embed via PC Worker (preferred) or direct LM Studio if EMBED_DIRECT_URL is set."""
+    """
+    Embed texts via:
+    1) Direct LM Studio URL (when EMBED_DIRECT_URL or lmstudio_base is configured), or
+    2) In-process PC Worker WebSocket if connected, or
+    3) Bridge internal RPC endpoint (/api/internal/embeddings) for separate ARQ worker processes.
+    """
     settings = get_settings()
     embed_model = model or settings.DEFAULT_EMBED_MODEL
-    direct = lmstudio_base or (settings.EMBED_DIRECT_URL or "").strip()
-    if not direct:
+    direct = (lmstudio_base or settings.EMBED_DIRECT_URL or "").strip()
+
+    if direct:
+        payload = await _post_with_retries(
+            f"{direct.rstrip('/')}/v1/embeddings",
+            {"model": embed_model, "input": texts},
+        )
+        data = payload.get("data") or []
+    else:
         from app.ws.manager import manager
 
-        result = await manager.request_embeddings(texts, embed_model)
-        data = result.get("data") or []
-        vectors = [
-            l2_normalize(item["embedding"])
-            for item in sorted(data, key=lambda x: x.get("index", 0))
-        ]
-    else:
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            resp = await client.post(
-                f"{str(direct).rstrip('/')}/v1/embeddings",
-                json={"model": embed_model, "input": texts},
-            )
-            resp.raise_for_status()
-            data = resp.json()["data"]
-            vectors = [
-                l2_normalize(item["embedding"]) for item in sorted(data, key=lambda x: x["index"])
-            ]
+        if manager.status()["worker_online"]:
+            result = await manager.request_embeddings(texts, embed_model)
+            data = result.get("data") or []
+        else:
+            bridge_url = (settings.BRIDGE_INTERNAL_URL or "").strip().rstrip("/")
+            if not bridge_url:
+                raise RuntimeError("PC Worker offline and BRIDGE_INTERNAL_URL not configured")
+            try:
+                payload = await _post_with_retries(
+                    f"{bridge_url}/api/internal/embeddings",
+                    {"input": texts, "model": embed_model},
+                    headers={"X-Worker-Token": settings.WORKER_TOKEN},
+                )
+            except httpx.HTTPStatusError as exc:
+                detail = exc.response.text[:200]
+                raise RuntimeError(
+                    f"Bridge embeddings RPC failed ({exc.response.status_code}): {detail}"
+                ) from exc
+            data = payload.get("data") or []
+
+    vectors = [
+        l2_normalize(item["embedding"]) for item in sorted(data, key=lambda x: x.get("index", 0))
+    ]
+    if len(vectors) != len(texts):
+        raise ValueError(f"Expected {len(texts)} embeddings, got {len(vectors)}")
     for v in vectors:
         if len(v) != settings.EMBED_DIM:
             raise ValueError(f"Expected embed dim {settings.EMBED_DIM}, got {len(v)}")
@@ -161,17 +219,20 @@ async def retrieve(
     lmstudio_base: str | None = None,
 ) -> list[dict]:
     settings = get_settings()
+    bounded_k = max(1, min(int(top_k), 20))
     embed_model = await resolve_embed_model(db)
     qvec = (await embed_texts([query], lmstudio_base=lmstudio_base, model=embed_model))[0]
-    fetch_k = top_k * 5
+    fetch_k = bounded_k * 5
+    ef_search = max(int(settings.RAG_HNSW_EF_SEARCH or HNSW_EF_SEARCH), 1)
     try:
-        await db.execute(
-            text("SELECT set_config('hnsw.ef_search', :v, true)"),
-            {"v": str(int(HNSW_EF_SEARCH))},
-        )
-    except Exception:
-        # Older pgvector builds may not expose ef_search; retrieval still works.
-        pass
+        async with db.begin_nested():
+            await db.execute(
+                text("SELECT set_config('hnsw.ef_search', :v, true)"),
+                {"v": str(ef_search)},
+            )
+    except Exception as exc:
+        logger.debug("Skipping hnsw.ef_search setting: %s", exc)
+
     sql = text(
         """
         SELECT c.id, c.doc_id, c.content, c.embed_model_id, c.embed_dim,
@@ -208,8 +269,9 @@ async def retrieve(
         stale = await db.scalar(
             select(func.count())
             .select_from(RagChunk)
+            .join(KnowledgeDoc, KnowledgeDoc.id == RagChunk.doc_id)
             .where(
-                RagChunk.user_id == user_id,
+                or_(RagChunk.user_id == user_id, KnowledgeDoc.is_shared.is_(True)),
                 RagChunk.embed_model_id != embed_model,
             )
         )
@@ -219,7 +281,7 @@ async def retrieve(
                 f"(current model={embed_model})"
             )
     out = []
-    for row in rows[:top_k]:
+    for row in rows[:bounded_k]:
         out.append(
             {
                 "chunk_id": str(row["id"]),
@@ -233,11 +295,13 @@ async def retrieve(
 
 
 def build_rag_context(sources: list[dict]) -> str:
+    settings = get_settings()
+    budget = max(int(settings.RAG_CONTEXT_CHARS or RAG_CONTEXT_CHARS), 500)
     parts: list[str] = []
     used = 0
     for s in sources:
         piece = f"[{s['doc_title']}] {s['snippet']}"
-        if used + len(piece) > RAG_CONTEXT_CHARS:
+        if used + len(piece) > budget:
             break
         parts.append(piece)
         used += len(piece) + 2

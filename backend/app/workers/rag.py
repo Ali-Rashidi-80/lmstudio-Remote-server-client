@@ -22,7 +22,7 @@ def _redis_settings() -> RedisSettings:
     return RedisSettings.from_dsn(settings.REDIS_URL)
 
 
-async def ingest_document(ctx: dict, doc_id: str, job_id: str) -> dict:
+async def ingest_document(_ctx: dict, doc_id: str, job_id: str) -> dict:
     """Index one knowledge document (called by ARQ worker process)."""
     did = uuid.UUID(doc_id)
     jid = uuid.UUID(job_id)

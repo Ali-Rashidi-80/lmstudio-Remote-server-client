@@ -1,23 +1,31 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+
+def _blank_email_to_none(v: str | None) -> str | None:
+    if isinstance(v, str) and not v.strip():
+        return None
+    return v
 
 
 class LoginRequest(BaseModel):
-    username: str
-    password: str = Field(min_length=10)
+    username: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=10, max_length=256)
 
 
 class AcceptInviteRequest(BaseModel):
-    token: str
+    token: str = Field(min_length=8, max_length=256)
     username: str = Field(min_length=3, max_length=64)
-    password: str = Field(min_length=10)
-    email: str | None = None
+    password: str = Field(min_length=10, max_length=256)
+    email: EmailStr | None = None
+
+    _normalize_email = field_validator("email", mode="before")(_blank_email_to_none)
 
 
 class ChangePasswordRequest(BaseModel):
-    current_password: str
-    new_password: str = Field(min_length=10)
+    current_password: str = Field(min_length=1, max_length=256)
+    new_password: str = Field(min_length=10, max_length=256)
 
 
 class UserOut(BaseModel):

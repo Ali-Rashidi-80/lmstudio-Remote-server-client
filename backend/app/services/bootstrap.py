@@ -20,10 +20,11 @@ async def ensure_pgvector(session: AsyncSession) -> None:
 
 
 async def ensure_hnsw_index(session: AsyncSession) -> None:
+    await session.execute(text("DROP INDEX IF EXISTS idx_rag_chunks_embedding_hnsw"))
     await session.execute(
         text(
             """
-            CREATE INDEX IF NOT EXISTS idx_rag_chunks_embedding_hnsw
+            CREATE INDEX IF NOT EXISTS ix_rag_chunks_embedding_hnsw
             ON rag_chunks
             USING hnsw (embedding vector_cosine_ops)
             WITH (m = 16, ef_construction = 200)

@@ -12,14 +12,18 @@ import ssl
 import subprocess
 import traceback
 import urllib.request
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import httpx
 import websockets
 from dotenv import load_dotenv
 
-from cipher_utils import decrypt_message, encrypt_message
+try:
+    from pc_client.cipher_utils import decrypt_message
+except ImportError:
+    from cipher_utils import decrypt_message
 
 # ==========================================
 # گارد امنیتی مطلق ضد پروکسی
@@ -44,16 +48,32 @@ urllib.request.getproxies = _empty_proxies
 # ==========================================
 current_dir = Path(__file__).parent
 env_path = current_dir / ".env"
+_should_override = os.getenv("PYTEST_CURRENT_TEST") is None
 if env_path.exists():
-    # override=True so pc_client/.env wins over stale shell env vars
-    load_dotenv(dotenv_path=env_path, override=True)
+    # override=True in normal runtime so pc_client/.env wins over stale shell env vars
+    load_dotenv(dotenv_path=env_path, override=_should_override)
 else:
-    load_dotenv(override=True)
+    load_dotenv(override=_should_override)
+
+_log_handlers: list[logging.Handler] = [logging.StreamHandler()]
+_pc_log_file = os.getenv("PC_LOG_FILE", "").strip()
+if _pc_log_file:
+    _log_path = Path(_pc_log_file)
+    _log_path.parent.mkdir(parents=True, exist_ok=True)
+    _log_handlers.append(
+        RotatingFileHandler(
+            _log_path,
+            maxBytes=int(os.getenv("PC_LOG_MAX_BYTES", str(10 * 1024 * 1024))),
+            backupCount=int(os.getenv("PC_LOG_BACKUP_COUNT", "5")),
+            encoding="utf-8",
+        )
+    )
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - [%(levelname)s] - PC_CORE - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=_log_handlers,
 )
 logger = logging.getLogger("Core")
 
@@ -71,8 +91,7 @@ def detect_hardware() -> str:
         if platform.system() in ["Windows", "Linux"]:
             res = subprocess.run(
                 ["nvidia-smi"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 check=False
             )
             if res.returncode == 0:
@@ -125,7 +144,7 @@ def init_config():
             json.dump(d_cfg, f, indent=4, ensure_ascii=False)
         _CACHED_CFG = d_cfg
     else:
-        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+        with open(CONFIG_FILE, encoding="utf-8") as f:
             _CACHED_CFG = json.load(f)
 
         old_prompt = (
@@ -142,8 +161,8 @@ def init_config():
 
 init_config()
 
-active_chats: Dict[str, list] = {}
-active_tasks: Dict[str, asyncio.Task] = {}
+active_chats: dict[str, list] = {}
+active_tasks: dict[str, asyncio.Task] = {}
 ws_send_lock = asyncio.Lock()
 global_http_client: Any = None
 llm_semaphore: Any = None
@@ -189,10 +208,10 @@ async def send_packet(
         async with asyncio.timeout(5.0):
             async with ws_send_lock:
                 await ws.send(json.dumps(packet, ensure_ascii=False))
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.error("Timeout sending packet to %s", client_id)
     except websockets.exceptions.ConnectionClosed:
-        pass
+        logger.debug("WebSocket closed while sending %s to %s", msg_type, client_id)
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.error("Failed to send packet to %s: %s", client_id, e)
 
@@ -227,7 +246,7 @@ class SafeMathEvaluator:
     def _eval_node(cls, node):
         """Evaluate a single AST node recursively."""
         if isinstance(node, ast.Constant):
-            if isinstance(node.value, (int, float)):
+            if isinstance(node.value, int | float):
                 return node.value
 
         if isinstance(node, ast.BinOp):
@@ -278,8 +297,8 @@ def execute_tool(name: str, args: dict) -> str:
 
 
 def prune_chat_history(
-    chat_history: List[Dict[str, Any]], max_length: int
-) -> List[Dict[str, Any]]:
+    chat_history: list[dict[str, Any]], max_length: int
+) -> list[dict[str, Any]]:
     """Prune chat history to maintain max length."""
     if len(chat_history) <= max_length:
         return chat_history
@@ -344,6 +363,7 @@ def _is_gpu_active(obj: Any) -> bool:
 async def hw_monitor(ws: Any):
     """Monitor hardware status and report to server."""
     lm_host = get_lm_host()
+    poll_sec = max(float(os.getenv("HW_POLL_SECONDS", "30")), 5.0)
     last_status = None
 
     while True:
@@ -365,7 +385,7 @@ async def hw_monitor(ws: Any):
                         if _is_gpu_active(models):
                             current_status = "GPU"
                 except ValueError:
-                    pass
+                    logger.debug("Invalid JSON from /v1/models during hw_monitor")
 
             if current_status != last_status:
                 last_status = current_status
@@ -373,25 +393,32 @@ async def hw_monitor(ws: Any):
                     async with asyncio.timeout(2.0):
                         async with ws_send_lock:
                             await ws.send(json.dumps({
+                                "v": 1,
                                 "type": "hw_info",
-                                "content": current_status
+                                "payload": {"hw": current_status},
+                                "hw": current_status,
+                                "content": current_status,
                             }))
-                except Exception:  # pylint: disable=broad-exception-caught
-                    pass
-        except Exception:  # pylint: disable=broad-exception-caught
+                except Exception as exc:  # pylint: disable=broad-exception-caught
+                    logger.debug("Failed to push hw_info (%s): %s", current_status, exc)
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            logger.debug("hw_monitor probe failed: %s", exc)
             if last_status != "OFF":
                 last_status = "OFF"
                 try:
                     async with asyncio.timeout(2.0):
                         async with ws_send_lock:
                             await ws.send(json.dumps({
+                                "v": 1,
                                 "type": "hw_info",
-                                "content": "OFF"
+                                "payload": {"hw": "OFF"},
+                                "hw": "OFF",
+                                "content": "OFF",
                             }))
-                except Exception:  # pylint: disable=broad-exception-caught
-                    pass
+                except Exception as send_exc:  # pylint: disable=broad-exception-caught
+                    logger.debug("Failed to push OFF hw_info: %s", send_exc)
 
-        await asyncio.sleep(300)
+        await asyncio.sleep(poll_sec)
 
 
 # ==========================================
@@ -399,14 +426,15 @@ async def hw_monitor(ws: Any):
 # ==========================================
 async def heartbeat_task(ws: Any):
     """Keep the WebSocket connection alive."""
+    interval = max(float(os.getenv("WS_HEARTBEAT_SECONDS", "15")), 5.0)
     while True:
         try:
             async with asyncio.timeout(2.0):
                 async with ws_send_lock:
-                    await ws.send(json.dumps({"type": "ping"}))
-        except Exception:  # pylint: disable=broad-exception-caught
-            pass
-        await asyncio.sleep(15)
+                    await ws.send(json.dumps({"v": 1, "type": "ping"}))
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            logger.debug("Heartbeat ping failed: %s", exc)
+        await asyncio.sleep(interval)
 
 
 # ==========================================
@@ -434,8 +462,8 @@ async def handle_unload_models(ws: Any, client_id: str):
                         json={"model": mid},
                         timeout=10.0
                     )
-                except Exception:  # pylint: disable=broad-exception-caught
-                    pass
+                except Exception as exc:  # pylint: disable=broad-exception-caught
+                    logger.warning("Failed to unload model %s: %s", mid, exc)
 
             await send_packet(
                 ws, client_id, "queue",
@@ -524,14 +552,77 @@ async def handle_get_models(ws: Any, client_id: str):
 # ==========================================
 # هسته هوش مصنوعی
 # ==========================================
+def build_chat_messages(
+    system_prompt: str,
+    user_text: str,
+    image_b64: str | None = None,
+    use_tools: bool = False,
+    req_history: list[dict[str, Any]] | None = None,
+    prior_messages: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    """Build OpenAI-format chat history, preserving assistant turns and the current user turn."""
+    sys_str = system_prompt or ""
+    if use_tools:
+        sys_str += "\nشما مجاز به استفاده از ابزارها هستید."
+
+    messages: list[dict[str, Any]] = [{"role": "system", "content": sys_str}]
+
+    if req_history and isinstance(req_history, list):
+        for m in req_history:
+            if not isinstance(m, dict):
+                continue
+            role = m.get("role")
+            if role == "user":
+                if m.get("image"):
+                    img_url = str(m["image"])
+                    if not img_url.startswith("data:image"):
+                        img_url = f"data:image/jpeg;base64,{img_url}"
+                    messages.append({
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": str(m.get("content") or "تصویر را بررسی کن.")},
+                            {"type": "image_url", "image_url": {"url": img_url}},
+                        ],
+                    })
+                else:
+                    messages.append({"role": "user", "content": str(m.get("content") or "")})
+            elif role in {"assistant", "ai"}:
+                messages.append({"role": "assistant", "content": str(m.get("content") or "")})
+    elif prior_messages:
+        for m in prior_messages:
+            if isinstance(m, dict) and m.get("role") != "system":
+                messages.append(m)
+
+    if image_b64:
+        img_url = image_b64 if image_b64.startswith("data:image") else f"data:image/jpeg;base64,{image_b64}"
+        messages.append({
+            "role": "user",
+            "content": [
+                {"type": "text", "text": user_text if user_text else "تصویر را بررسی کن."},
+                {"type": "image_url", "image_url": {"url": img_url}},
+            ],
+        })
+    elif user_text:
+        trimmed = user_text[:20000]
+        already_last = (
+            len(messages) > 1
+            and messages[-1].get("role") == "user"
+            and messages[-1].get("content") == trimmed
+        )
+        if not already_last:
+            messages.append({"role": "user", "content": trimmed})
+
+    return messages
+
+
 async def run_ai(
     ws: Any,
     client_id: str,
     user_text: str,
     requested_model: str,
-    image_b64: str = None,
+    image_b64: str | None = None,
     use_tools: bool = False,
-    req_history: list = None
+    req_history: list | None = None,
 ):
     """Run the main AI chat loop."""
     cfg = _CACHED_CFG
@@ -543,7 +634,7 @@ async def run_ai(
         try:
             await asyncio.wait_for(llm_semaphore.acquire(), timeout=0.1)
             sem_acquired = True
-        except asyncio.TimeoutError:
+        except TimeoutError:
             await send_packet(ws, client_id, "queue", "⏳ در صف پردازش...")
             await llm_semaphore.acquire()
             sem_acquired = True
@@ -557,73 +648,14 @@ async def run_ai(
         async with asyncio.timeout(llm_timeout):
             m_key = requested_model if requested_model else lm_cfg.get("model_key")
 
-            # Context reconstruction from Web/GUI payloads
-            if req_history and isinstance(req_history, list):
-                sys_str = lm_cfg.get("system_prompt", "")
-                if use_tools:
-                    sys_str += "\nشما مجاز به استفاده از ابزارها هستید."
-                
-                reconstructed = [{"role": "system", "content": sys_str}]
-                for m in req_history:
-                    if m.get("role") == "user":
-                        if m.get("image"):
-                            reconstructed.append({
-                                "role": "user",
-                                "content": [
-                                    {
-                                        "type": "text",
-                                        "text": m.get("content") or "تصویر را بررسی کن."
-                                    },
-                                    {
-                                        "type": "image_url",
-                                        "image_url": {"url": m["image"]}
-                                    }
-                                ]
-                            })
-                        else:
-                            reconstructed.append({
-                                "role": "user",
-                                "content": m.get("content", "")
-                            })
-                    elif m.get("role") == "ai":
-                        reconstructed.append({
-                            "role": "assistant",
-                            "content": m.get("content", "")
-                        })
-                
-                active_chats[client_id] = reconstructed
-            else:
-                if client_id not in active_chats:
-                    sys_prompt = lm_cfg.get("system_prompt", "")
-                    if use_tools:
-                        sys_prompt += "\nشما مجاز به استفاده از ابزارها هستید."
-                    active_chats[client_id] = [
-                        {"role": "system", "content": sys_prompt}
-                    ]
-
-                if image_b64:
-                    if not image_b64.startswith("data:image"):
-                        image_b64 = f"data:image/jpeg;base64,{image_b64}"
-
-                    fallback_txt = "تصویر را بررسی کن."
-                    active_chats[client_id].append({
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": user_text if user_text else fallback_txt
-                            },
-                            {
-                                "type": "image_url",
-                                "image_url": {"url": image_b64}
-                            }
-                        ]
-                    })
-                else:
-                    active_chats[client_id].append({
-                        "role": "user",
-                        "content": user_text[:10000]
-                    })
+            active_chats[client_id] = build_chat_messages(
+                system_prompt=lm_cfg.get("system_prompt", ""),
+                user_text=user_text,
+                image_b64=image_b64,
+                use_tools=use_tools,
+                req_history=req_history,
+                prior_messages=active_chats.get(client_id),
+            )
 
             max_hist = cfg["features"]["max_history_messages"]
             active_chats[client_id] = prune_chat_history(
@@ -646,6 +678,8 @@ async def run_ai(
                     "temperature": lm_cfg["temperature"],
                     "stream": cfg["features"]["use_streaming"]
                 }
+                if lm_cfg.get("force_context_length") and lm_cfg.get("max_tokens"):
+                    payload["max_tokens"] = lm_cfg["max_tokens"]
 
                 if use_tools or has_tools:
                     payload["tools"] = TOOLS
@@ -743,7 +777,7 @@ async def run_ai(
                     }
                     active_chats[client_id].append(assistant_msg)
 
-                    for idx, tc in tool_calls_accumulator.items():
+                    for _idx, tc in tool_calls_accumulator.items():
                         func_name = tc["function"]["name"]
                         arg_str = tc["function"]["arguments"]
 
@@ -795,7 +829,7 @@ async def run_ai(
 
     except asyncio.CancelledError:
         logger.info("Task for %s gracefully cancelled.", client_id)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.error("AI processing timed out.")
         await send_packet(ws, client_id, "error", "تایم‌اوت در پردازش.")
     except Exception as e:  # pylint: disable=broad-exception-caught
@@ -806,15 +840,15 @@ async def run_ai(
                     ws, client_id, "chunk", "\n\n[⚠️ توقف با خطا]"
                 )
                 await send_packet(ws, client_id, "done", "")
-            except Exception:  # pylint: disable=broad-exception-caught
-                pass
+            except Exception as send_exc:  # pylint: disable=broad-exception-caught
+                logger.warning("Failed sending error termination packet: %s", send_exc)
         else:
             try:
                 await send_packet(
                     ws, client_id, "error", f"خطای پردازش: {str(e)[:80]}"
                 )
-            except Exception:  # pylint: disable=broad-exception-caught
-                pass
+            except Exception as send_exc:  # pylint: disable=broad-exception-caught
+                logger.warning("Failed sending AI error packet: %s", send_exc)
     finally:
         if sem_acquired:
             llm_semaphore.release()
@@ -830,7 +864,7 @@ async def pc_worker():
     global global_http_client  # pylint: disable=global-statement
 
     raw_url = os.getenv(
-        "BRIDGE_WS_URL", "ws://127.0.0.1:8000"
+        "BRIDGE_WS_URL", "ws://127.0.0.1:8010"
     ).strip().rstrip("/")
 
     if raw_url.startswith("http://"):
@@ -893,6 +927,7 @@ async def pc_worker():
 
                     monitor_task = asyncio.create_task(hw_monitor(ws))
                     hb_task = asyncio.create_task(heartbeat_task(ws))
+                    asyncio.create_task(handle_get_models(ws, "system"))
 
                     try:
                         async for raw in ws:
@@ -905,8 +940,8 @@ async def pc_worker():
                                             await ws.send(
                                                 json.dumps({"v": 1, "type": "pong"})
                                             )
-                                except Exception:  # pylint: disable=broad-exception-caught
-                                    pass
+                                except Exception as exc:  # pylint: disable=broad-exception-caught
+                                    logger.debug("Failed sending pong: %s", exc)
                                 continue
 
                             if msg.get("type") == "pong":
@@ -1035,11 +1070,7 @@ async def pc_worker():
                     finally:
                         monitor_task.cancel()
                         hb_task.cancel()
-                        try:
-                            await monitor_task
-                            await hb_task
-                        except asyncio.CancelledError:
-                            pass
+                        await asyncio.gather(monitor_task, hb_task, return_exceptions=True)
 
             except Exception as e:  # pylint: disable=broad-exception-caught
                 logger.error("🔴 Connection Dropped: %s", e)
